@@ -13,7 +13,8 @@
 		abort();                                                       \
 	} while (0)
 
-/* strbuff.c : dynamic string buffer */
+struct json_value;
+typedef struct json_value* json_t;
 
 struct strbuff {
 	char* data;
@@ -23,15 +24,72 @@ struct strbuff {
 	bool stack;
 };
 
+struct strarr {
+	char** data;
+	size_t alc;
+	size_t count;
+};
+
+struct track {
+	char* id;
+	char* name;
+	struct strarr artists;
+	struct strarr tags;
+	int remote_index;
+};
+
+typedef struct track* track_t;
+
+struct playlist {
+	char* playlist_id;
+	char* sort_order;
+	int same_artist_spacing;
+	int bump_offset;
+	int bump_spacing;
+	struct strarr header;
+	struct track* tracks;
+	size_t count;
+	size_t alc;
+	int separator;
+};
+
+typedef struct playlist* playlist_t;
+
+/* api.c */
+
+json_t api_get_paginated(const char* path);
+playlist_t api_get_playlist(const char* id);
+
+/* fs.c */
+
+struct strbuff fs_read(const char*);
+json_t fs_read_json(const char*);
+void fs_write_playlist(playlist_t, const char* filename);
+
+/* playlist.c */
+
+void playlist_add(playlist_t, track_t);
+playlist_t playlist_init(playlist_t);
+void playlist_validate(playlist_t, const char* source);
+void playlist_free(playlist_t);
+
+/* strarr.c */
+
+void strarr_add(struct strarr*, const char*);
+void strarr_clear(struct strarr*);
+void strarr_set(struct strarr* dst, struct strarr* src);
+
+/* strbuff.c : dynamic string buffer */
+
 void strbuff_add(struct strbuff* buff, const char* ptr, size_t n);
 void strbuff_addz(struct strbuff* buff, const char* ptr);
 void strbuff_addch(struct strbuff* buff, const char ch);
 struct strbuff strbuff_wrap(char*, size_t);
+char* strbuff_export(struct strbuff*);
 
 /* json.c */
 
-struct json_value;
-typedef struct json_value* json_t;
+bool json_isnull(json_t);
 
 json_t json_object(void);
 void json_put(json_t obj, char* key, json_t value);
@@ -62,11 +120,6 @@ void json_free(json_t json);
 
 json_t json_parse(struct strbuff*);
 
-/* fs.c */
-
-struct strbuff fs_read(const char*);
-json_t fs_read_json(const char*);
-
 /* http.c */
 
 struct http_request {
@@ -84,15 +137,16 @@ void http_submit(struct strbuff*, struct http_request);
 void url_encode(struct strbuff*, const char* s);
 void url_encode_pair(struct strbuff*, const char* key, const char* value);
 
-/* api.c */
-
-json_t api_get_paginated(const char* path);
-
 /* secrets.c : credentials management */
 
+const char* spy_access_token(void);
 void secrets_configure(const char* client_id, const char* client_secret);
 void secrets_login(const char* code, const char* redirect_url);
 const char* secrets_token(void);
+
+/* cmd_fetch.c */
+
+void cmd_fetch(const char* playlist_id, const char* filename);
 
 /* cmd_list.c */
 

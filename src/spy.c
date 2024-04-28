@@ -14,7 +14,9 @@ const char HELP[] =
 	"    spy login\n"
 	"        Set up the credentials for accessing Spotify API\n"
 	"    spy list\n"
-	"        Retrieves and prints the full list of user's playlist\n";
+	"        Retrieves and prints the full list of user's playlist\n"
+	"    spy fetch <playlist_id> <filename>\n"
+	"        Retrieves the playlist and stores into a file\n";
 
 static int __argc;
 static char** __argv;
@@ -39,6 +41,8 @@ int main(int argc, char** argv)
 		cmd_login();
 	else if (__match("list", 0))
 		cmd_list();
+	else if (__match("fetch", 2))
+		cmd_fetch(argv[2], argv[3]);
 	else
 		printf("%s", HELP);
 }

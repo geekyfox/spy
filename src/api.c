@@ -62,3 +62,50 @@ json_t api_get_paginated(const char* path)
 
 	return ret;
 }
+
+void __digest_track(track_t ret, json_t blob)
+{
+	json_t track = json_pop(blob, "track", NULL);
+
+	bzero(ret, sizeof(*ret));
+
+	ret->id = json_popstr(track, "id", NULL);
+	ret->name = json_popstr(track, "name", NULL);
+
+	json_t artists = json_pop(track, "artists", NULL);
+
+	int count = json_len(artists);
+	for (int i = 0; i < count; i++) {
+		json_t artist = json_get(artists, i);
+		const char* name = json_popstr(artist, "name", NULL);
+		strarr_add(&ret->artists, name);
+	}
+
+	strarr_add(&ret->tags, "new");
+}
+
+playlist_t api_get_playlist(const char* id)
+{
+	playlist_t ret = playlist_init(NULL);
+	ret->playlist_id = strdup(id);
+
+	char path[10240];
+	sprintf(path, "/playlists/%s/tracks", id);
+	json_t resp = api_get_paginated(path);
+
+	int count = json_len(resp);
+
+	for (int i = 0; i < count; i++) {
+		json_t blob = json_get(resp, i);
+		struct track tr;
+		__digest_track(&tr, blob);
+		tr.remote_index = i + 1;
+		playlist_add(ret, &tr);
+	}
+
+	json_free(resp);
+
+	playlist_validate(ret, path);
+
+	return ret;
+}
