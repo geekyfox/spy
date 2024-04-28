@@ -41,6 +41,8 @@ double json_popnum(json_t value, const char* key, bool* flagptr);
 
 json_t json_array(void);
 void json_push(json_t arr, json_t value);
+size_t json_len(json_t);
+json_t json_get(json_t arr, size_t index);
 
 json_t json_wstr(char* string);
 char* json_uwstr(json_t);
@@ -50,12 +52,20 @@ json_t json_wnum(double n);
 json_t json_wbool(bool);
 
 json_t json_null(void);
+bool json_isnull(json_t);
+
+void json_merge(json_t, json_t);
 
 void json_free(json_t json);
 
 /* json_parser.c */
 
 json_t json_parse(struct strbuff*);
+
+/* fs.c */
+
+struct strbuff fs_read(const char*);
+json_t fs_read_json(const char*);
 
 /* http.c */
 
@@ -74,10 +84,19 @@ void http_submit(struct strbuff*, struct http_request);
 void url_encode(struct strbuff*, const char* s);
 void url_encode_pair(struct strbuff*, const char* key, const char* value);
 
+/* api.c */
+
+json_t api_get_paginated(const char* path);
+
 /* secrets.c : credentials management */
 
 void secrets_configure(const char* client_id, const char* client_secret);
 void secrets_login(const char* code, const char* redirect_url);
+const char* secrets_token(void);
+
+/* cmd_list.c */
+
+void cmd_list(void);
 
 /* cmd_login.c */
 

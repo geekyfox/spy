@@ -149,6 +149,18 @@ void json_push(json_t value, json_t obj)
 	arr->data[arr->count++] = obj;
 }
 
+size_t json_len(json_t arr)
+{
+	ASSERT_TYPE(arr, JSON_ARRAY);
+	return arr->value.array->count;
+}
+
+json_t json_get(json_t arr, size_t index)
+{
+	ASSERT_TYPE(arr, JSON_ARRAY);
+	return arr->value.array->data[index];
+}
+
 json_t json_wstr(char* string)
 {
 	json_t ret = __make(JSON_STRING);
@@ -185,6 +197,11 @@ json_t json_wbool(bool x)
 json_t json_null()
 {
 	return __make(JSON_NULL);
+}
+
+bool json_isnull(json_t x)
+{
+	return x->typecode == JSON_NULL;
 }
 
 static void __reset_array(struct json_array* arr)
@@ -231,4 +248,21 @@ void json_free(json_t json)
 {
 	__reset(json);
 	free(json);
+}
+
+void json_merge(json_t dst, json_t src)
+{
+	if ((dst->typecode == JSON_ARRAY) && (src->typecode == JSON_ARRAY)) {
+		struct json_array* src_arr = src->value.array;
+
+		for (int i = 0; i < src_arr->count; i++)
+			json_push(dst, src_arr->data[i]);
+		src_arr->count = 0;
+
+		__reset(src);
+	} else {
+		DIE("Don't know how to merge %d into %d",
+		    src->typecode,
+		    dst->typecode);
+	}
 }

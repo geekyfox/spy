@@ -47,6 +47,37 @@ static void __write(void)
 	fclose(f);
 }
 
+static void __read(void)
+{
+	char pathname[1024];
+	__pathname(pathname);
+
+	json_t value = fs_read_json(pathname);
+	bool flag;
+
+	the_client_id = json_popstr(value, "client_id", &flag);
+	if (! flag)
+		DIE("'client_id' is missing in %s", pathname);
+
+	the_client_secret = json_popstr(value, "client_secret", &flag);
+	if (! flag)
+		DIE("'client_secret' is missing in %s", pathname);
+
+	the_access_token = json_popstr(value, "access_token", &flag);
+	if (! flag)
+		DIE("'access_token' is missing in %s", pathname);
+
+	the_refresh_token = json_popstr(value, "refresh_token", &flag);
+	if (! flag)
+		DIE("'refresh_token' is missing in %s", pathname);
+
+	the_expires_at = json_popnum(value, "expires_at", &flag);
+	if (! flag)
+		DIE("'expires_at' is missing in %s", pathname);
+
+	json_free(value);
+}
+
 static const char B64_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 				"abcdefghijklmnopqrstuvwxyz"
 				"0123456789+/";
@@ -84,6 +115,13 @@ void __make_login_params(char* dst, size_t size, const char* code,
 	url_encode_pair(&buff, "grant_type", "authorization_code");
 	url_encode_pair(&buff, "&code", code);
 	url_encode_pair(&buff, "&redirect_uri", redirect_url);
+}
+
+void __make_refresh_params(char* dst, size_t size)
+{
+	struct strbuff buff = strbuff_wrap(dst, size);
+	url_encode_pair(&buff, "grant_type", "refresh_token");
+	url_encode_pair(&buff, "&refresh_token", the_refresh_token);
 }
 
 void __make_auth_header(char* dst)
@@ -124,6 +162,27 @@ void __apply_response(struct strbuff* buff)
 	json_free(value);
 }
 
+void __refresh()
+{
+	char params[1024], auth_header[1024];
+	struct strbuff buff;
+
+	__make_refresh_params(params, 1024);
+	__make_auth_header(auth_header);
+
+	struct http_request req = {
+		.method = "POST",
+		.url = "https://accounts.spotify.com/api/token",
+		.payload = params,
+		.auth = auth_header,
+	};
+
+	http_submit(&buff, req);
+
+	__apply_response(&buff);
+	__write();
+}
+
 void __cleanup(void)
 {
 	free(the_client_id);
@@ -160,4 +219,18 @@ void secrets_login(const char* code, const char* redirect_url)
 
 	__apply_response(&buff);
 	__write();
+}
+
+const char* secrets_token()
+{
+	if (! the_client_id) {
+		__read();
+		atexit(__cleanup);
+	}
+
+	int until_expiry = the_expires_at - time(NULL);
+	if (until_expiry < 60)
+		__refresh();
+
+	return the_access_token;
 }
