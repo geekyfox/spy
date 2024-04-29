@@ -105,7 +105,7 @@ playlist_t api_get_playlist(const char* id)
 
 	json_free(resp);
 
-	playlist_validate(ret, path);
+	validate_playlist(ret, path, 0);
 
 	return ret;
 }

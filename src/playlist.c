@@ -22,6 +22,17 @@ playlist_t playlist_init(playlist_t original)
 	return ret;
 }
 
+playlist_t playlist_read(const char* filename, int flags)
+{
+	playlist_t ret = fs_read_playlist(filename);
+
+	char buffer[10240];
+	sprintf(buffer, "local playlist from file %s", filename);
+	validate_playlist(ret, buffer, flags);
+
+	return ret;
+}
+
 void playlist_add(playlist_t p, track_t t)
 {
 	if (p->alc == p->count) {
@@ -33,46 +44,34 @@ void playlist_add(playlist_t p, track_t t)
 	bzero(t, sizeof(*t));
 }
 
-void playlist_validate(playlist_t p, const char* source)
+bool playlist_iterate(track_t* tptr, playlist_t p)
 {
-	bool issues = false;
-	char header[1024];
-	sprintf(header, "Issues detected in %s:\n", source);
+	int index = *tptr ? (*tptr - p->tracks + 1) : 0;
 
-	bool duplicates = false;
-
-	for (int i = 0; i < p->count; i++) {
-		for (int j = i + 1; j < p->count; j++) {
-			if (strcmp(p->tracks[i].id, p->tracks[j].id) != 0)
-				continue;
-			if (! issues) {
-				fputs(header, stderr);
-				issues = true;
-			}
-			if (! duplicates) {
-				fputs("    Duplicate tracks:\n", stderr);
-				duplicates = true;
-			}
-			fprintf(stderr,
-				"      * %d and %d (%s by %s)\n",
-				i + 1,
-				j + 1,
-				p->tracks[i].name,
-				p->tracks[i].artists.data[0]);
+	while (index < p->count) {
+		if (p->tracks[index].id == NULL) {
+			index++;
+		} else {
+			*tptr = &p->tracks[index];
+			return true;
 		}
 	}
 
-	if (issues)
-		exit(1);
+	return false;
 }
 
-static void __clear_track(track_t tr)
+track_t playlist_lookup(playlist_t p, const char* track_id)
 {
-	free(tr->id);
-	free(tr->name);
-	strarr_clear(&tr->artists);
-	strarr_clear(&tr->tags);
-	bzero(tr, sizeof(*tr));
+	if (track_id == NULL)
+		DIE("That's unexpected");
+
+	for (int i = 0; i < p->count; i++) {
+		track_t t = &p->tracks[i];
+		if ((t->id != NULL) && (strcmp(t->id, track_id) == 0))
+			return t;
+	}
+
+	return NULL;
 }
 
 void playlist_free(playlist_t p)
@@ -81,7 +80,7 @@ void playlist_free(playlist_t p)
 	free(p->sort_order);
 
 	for (int i = 0; i < p->count; i++)
-		__clear_track(&p->tracks[i]);
+		track_clear(&p->tracks[i]);
 	free(p->tracks);
 
 	strarr_clear(&p->header);

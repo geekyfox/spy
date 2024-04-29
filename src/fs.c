@@ -82,3 +82,138 @@ void fs_write_playlist(playlist_t p, const char* filename)
 	fclose(f);
 	rename(tmpfile, filename);
 }
+
+static void __trim_right(char* buff)
+{
+	int ix = strlen(buff) - 1;
+	while ((ix >= 0) && isspace(buff[ix]))
+		buff[ix--] = '\0';
+}
+
+static void __read_header(struct playlist* dst, const char* buff)
+{
+	char* sep = strstr(buff, " ");
+	if (! sep)
+		DIE("Malformed setting %s", buff);
+
+	strarr_add(&dst->header, buff);
+
+	if (buff[0] == '!')
+		return;
+
+	*sep = '\0';
+	char* value = sep + 1;
+
+	if (strcmp(buff, "playlist_id") == 0)
+		dst->playlist_id = strdup(value);
+	else if (strcmp(buff, "sort_order") == 0)
+		dst->sort_order = strdup(value);
+	else if (strcmp(buff, "same_artist_spacing") == 0)
+		dst->same_artist_spacing = atoi(value);
+	else if (strcmp(buff, "bump_offset") == 0)
+		dst->bump_offset = atoi(value);
+	else if (strcmp(buff, "bump_spacing") == 0)
+		dst->bump_spacing = atoi(value);
+	else
+		DIE("Unknown setting %s %s", buff, value);
+}
+
+static int __read_index(const char* buff)
+{
+	char* sep = strstr(buff, "(");
+	if (sep)
+		return atoi(sep + 1);
+	else
+		return atoi(buff);
+}
+
+static bool __read_index_name_artists(struct track* cur, const char* buff)
+{
+	char* sep = strstr(buff, " :: ");
+	if (! sep)
+		return false;
+
+	*sep = '\0';
+
+	cur->remote_index = __read_index(buff);
+
+	char* name = sep + 4;
+	sep = strstr(name, " :: ");
+	if (! sep)
+		return false;
+
+	*sep = '\0';
+	cur->name = strdup(name);
+	strarr_split(&cur->artists, sep + 4, ", ");
+
+	return true;
+}
+
+static void __parse_line(const char* line, int line_index, struct playlist* p,
+			 struct track* t)
+{
+	if (line[0] == '\0') {
+		if (t->id)
+			playlist_add(p, t);
+		return;
+	}
+
+	if (strncmp(line, "### ", 4) == 0) {
+		__read_header(p, line + 4);
+		return;
+	}
+
+	if (strncmp(line, "# ", 2) == 0) {
+		if (t->id)
+			fprintf(stderr, "Line %d is bad", line_index);
+		else
+			t->id = strdup(line + 2);
+		return;
+	}
+
+	if (strncmp(line, "----", 4) == 0) {
+		if (p->separator >= 0)
+			fprintf(stderr, "Line %d is bad", line_index);
+		else
+			p->separator = p->count;
+		return;
+	}
+
+	if (strncmp(line, "> ", 2) == 0) {
+		if (t->tags.count)
+			fprintf(stderr, "Line %d is bad", line_index);
+		else
+			strarr_split(&t->tags, line + 2, " ");
+		return;
+	}
+
+	if (__read_index_name_artists(t, line))
+		return;
+
+	DIE("Unable to parse line %d: %s", line_index, line);
+}
+
+playlist_t fs_read_playlist(const char* filename)
+{
+	FILE* f = fopen(filename, "r");
+	if (! f)
+		DIE("Error opening file %s: %m", filename);
+
+	playlist_t ret = playlist_init(NULL);
+
+	char buffer[10240];
+
+	struct track track;
+	bzero(&track, sizeof(track));
+
+	int line_count = 0;
+	while (fgets(buffer, 10000, f)) {
+		line_count++;
+		__trim_right(buffer);
+		__parse_line(buffer, line_count, ret, &track);
+	}
+
+	fclose(f);
+
+	return ret;
+}

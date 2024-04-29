@@ -24,10 +24,54 @@ void strarr_set(struct strarr* dst, struct strarr* src)
 		strarr_add(dst, src->data[i]);
 }
 
+void strarr_move(struct strarr* dst, struct strarr* src)
+{
+	for (int i = 0; i < dst->count; i++)
+		free(dst->data[i]);
+	free(dst->data);
+	*dst = *src;
+	bzero(src, sizeof(*src));
+}
+
 void strarr_clear(struct strarr* arr)
 {
 	for (int i = 0; i < arr->count; i++)
 		free(arr->data[i]);
 	free(arr->data);
 	bzero(arr, sizeof(*arr));
+}
+
+bool strarr_has(struct strarr* arr, const char* s)
+{
+	return strarr_seek(arr, s) >= 0;
+}
+
+int strarr_seek(struct strarr* arr, const char* s)
+{
+	for (int i = 0; i < arr->count; i++)
+		if (strcmp(arr->data[i], s) == 0)
+			return i;
+
+	return -1;
+}
+
+void strarr_split(struct strarr* ret, const char* text, const char* sep)
+{
+	char *temp, *scan, *next;
+	size_t seplen;
+
+	bzero(ret, sizeof(*ret));
+	temp = strdup(text);
+	scan = temp;
+	seplen = strlen(sep);
+
+	while ((next = strstr(scan, sep))) {
+		*next = '\0';
+		strarr_add(ret, scan);
+		scan = next + seplen;
+	}
+
+	strarr_add(ret, scan);
+
+	free(temp);
 }
