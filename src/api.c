@@ -109,3 +109,84 @@ playlist_t api_get_playlist(const char* id)
 
 	return ret;
 }
+
+static void __post(const char* path, const char* body)
+{
+	__submit(NULL, "POST", path, body);
+}
+
+static void __delete(const char* path, const char* body)
+{
+	__submit(NULL, "DELETE", path, body);
+}
+
+static void __put(const char* path, const char* body)
+{
+	__submit(NULL, "PUT", path, body);
+}
+
+void api_reorder(const char* playlist_id, int start, int before, int length)
+{
+	char path[1024], content[10240];
+	sprintf(path, "/playlists/%s/tracks", playlist_id);
+	sprintf(content,
+		"{\"range_start\":%d,\"insert_before\":%d,\"range_length\":%d}",
+		start,
+		before,
+		length);
+
+	__put(path, content);
+}
+
+void api_add_tracks(const char* playlist_id, const struct strarr* tracks)
+{
+	char path[10240];
+	sprintf(path, "/playlists/%s/tracks", playlist_id);
+
+	int first = 0;
+
+	struct strbuff req;
+	bzero(&req, sizeof(req));
+
+	while (first < tracks->count) {
+		int last = first + 50;
+		if (last > tracks->count)
+			last = tracks->count;
+		strbuff_addz(&req, "{\"uris\":[");
+
+		for (int i = first; i < last; i++) {
+			if (i != first)
+				strbuff_addch(&req, ',');
+			strbuff_addz(&req, "\"spotify:track:");
+			strbuff_addz(&req, tracks->data[i]);
+			strbuff_addch(&req, '"');
+		}
+		strbuff_addz(&req, "]}\0");
+		__post(path, req.data);
+		req.wix = 0;
+		first = last;
+	}
+
+	free(req.data);
+}
+
+void api_remove_tracks(const char* playlist_id, const struct strarr* track_ids)
+{
+	char path[10240];
+	sprintf(path, "/playlists/%s/tracks", playlist_id);
+
+	struct strbuff req;
+	bzero(&req, sizeof(req));
+	strbuff_addz(&req, "{\n    \"tracks\":\n        [");
+
+	for (int i = 0; i < track_ids->count; i++) {
+		if (i != 0)
+			strbuff_addch(&req, ',');
+		strbuff_addz(&req, "\n        {\"uri\":\"spotify:track:");
+		strbuff_addz(&req, track_ids->data[i]);
+		strbuff_addz(&req, "\"}");
+	}
+	strbuff_addz(&req, "]}\0");
+
+	__delete(path, req.data);
+}

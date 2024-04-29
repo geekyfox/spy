@@ -12,13 +12,15 @@
 const char HELP[] =
 	"Usage:\n"
 	"    spy login\n"
-	"        Sets up the credentials for accessing Spotify API\n"
+	"        Set up the credentials for accessing Spotify API\n"
 	"    spy list\n"
-	"        Retrieves and prints the full list of user's playlist\n"
+	"        Fetch and prints the full list of user's playlist\n"
 	"    spy fetch <playlist_id> <filename>\n"
-	"        Retrieves the playlist and stores into a file\n"
+	"        Fetch remote playlist and store into a file\n"
 	"    spy pull [--keep-order] <filename>\n"
-	"        Retrieves the playlist and combines it with one stored in a local file\n";
+	"        Fetch remote playlist and incorporate it with a local one\n"
+	"    spy push [--dryrun] <filename>\n"
+	"        Apply the local changes to remote playlist\n";
 
 static int __argc;
 static char** __argv;
@@ -60,6 +62,10 @@ int main(int argc, char** argv)
 		cmd_pull(argv[2], PULL_MODE_REMOTE_ORDER);
 	else if (__match_flag("pull", "--keep-order", 1))
 		cmd_pull(argv[3], PULL_MODE_LOCAL_ORDER);
+	else if (__match("push", 1))
+		cmd_push(argv[2], false);
+	else if (__match_flag("push", "--dryrun", 1))
+		cmd_pull(argv[3], true);
 	else
 		printf("%s", HELP);
 }

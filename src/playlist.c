@@ -86,3 +86,26 @@ void playlist_free(playlist_t p)
 	strarr_clear(&p->header);
 	free(p);
 }
+
+void playlist_pack(playlist_t p)
+{
+	int wix = -1;
+
+	for (int i = 0; i < p->count; i++) {
+		if (p->tracks[i].id == NULL) {
+			wix = i;
+			break;
+		}
+	}
+
+	if (wix == -1)
+		return;
+
+	for (int i = wix; i < p->count; i++) {
+		if (p->tracks[i].id == NULL)
+			continue;
+		p->tracks[wix++] = p->tracks[i];
+	}
+
+	p->count = wix;
+}

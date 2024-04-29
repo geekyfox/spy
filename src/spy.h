@@ -59,6 +59,9 @@ typedef struct playlist* playlist_t;
 
 json_t api_get_paginated(const char* path);
 playlist_t api_get_playlist(const char* id);
+void api_reorder(const char* playlist_id, int start, int before, int length);
+void api_add_tracks(const char* playlist_id, const struct strarr* tracks);
+void api_remove_tracks(const char* playlist_id, const struct strarr* track_ids);
 
 /* fs.c */
 
@@ -74,6 +77,7 @@ playlist_t playlist_init(playlist_t);
 bool playlist_iterate(track_t* tptr, playlist_t p);
 track_t playlist_lookup(playlist_t p, const char* track_id);
 playlist_t playlist_read(const char* filename, int flags);
+void playlist_pack(playlist_t);
 void playlist_free(playlist_t);
 
 /* strarr.c */
@@ -186,5 +190,9 @@ enum pull_mode {
 };
 
 void cmd_pull(const char* filename, enum pull_mode);
+
+/* cmd_push.c */
+
+void cmd_push(const char* filename, bool dryrun);
 
 #endif
