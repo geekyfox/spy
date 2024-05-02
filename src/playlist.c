@@ -84,6 +84,7 @@ void playlist_free(playlist_t p)
 	free(p->tracks);
 
 	strarr_clear(&p->header);
+	strarr_clear(&p->aliases);
 	free(p);
 }
 

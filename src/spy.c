@@ -20,7 +20,9 @@ const char HELP[] =
 	"    spy pull [--keep-order] <filename>\n"
 	"        Fetch remote playlist and incorporate it with a local one\n"
 	"    spy push [--dryrun] <filename>\n"
-	"        Apply the local changes to remote playlist\n";
+	"        Apply the local changes to remote playlist\n"
+	"    spy sort [--race] <filename>\n"
+	"        Rearrange the playlist\n";
 
 static int __argc;
 static char** __argv;
@@ -66,6 +68,10 @@ int main(int argc, char** argv)
 		cmd_push(argv[2], false);
 	else if (__match_flag("push", "--dryrun", 1))
 		cmd_pull(argv[3], true);
+	else if (__match("sort", 1))
+		cmd_sort(argv[2], SORT_MODE_DEFAULT);
+	else if (__match_flag("sort", "--race", 1))
+		cmd_pull(argv[3], SORT_MODE_RACE);
 	else
 		printf("%s", HELP);
 }

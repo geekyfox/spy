@@ -51,6 +51,7 @@ struct playlist {
 	size_t count;
 	size_t alc;
 	int separator;
+	struct strarr aliases;
 };
 
 typedef struct playlist* playlist_t;
@@ -194,5 +195,14 @@ void cmd_pull(const char* filename, enum pull_mode);
 /* cmd_push.c */
 
 void cmd_push(const char* filename, bool dryrun);
+
+/* cmd_sort.c */
+
+enum sort_mode {
+	SORT_MODE_DEFAULT = 45001,
+	SORT_MODE_RACE = 45002,
+};
+
+void cmd_sort(const char* filename, enum sort_mode);
 
 #endif

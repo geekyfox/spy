@@ -90,6 +90,19 @@ static void __trim_right(char* buff)
 		buff[ix--] = '\0';
 }
 
+static void __parse_aliases(playlist_t dst, const char* value)
+{
+	struct strarr tmp;
+	strarr_split(&tmp, value, " == ");
+	for (int i = 0; i < tmp.count; i++) {
+		for (int j = i + 1; j < tmp.count; j++) {
+			strarr_add(&dst->aliases, tmp.data[i]);
+			strarr_add(&dst->aliases, tmp.data[j]);
+		}
+	}
+	strarr_clear(&tmp);
+}
+
 static void __read_header(struct playlist* dst, const char* buff)
 {
 	char* sep = strstr(buff, " ");
@@ -114,6 +127,8 @@ static void __read_header(struct playlist* dst, const char* buff)
 		dst->bump_offset = atoi(value);
 	else if (strcmp(buff, "bump_spacing") == 0)
 		dst->bump_spacing = atoi(value);
+	else if (! strcmp(buff, "alias"))
+		__parse_aliases(dst, value);
 	else
 		DIE("Unknown setting %s %s", buff, value);
 }
