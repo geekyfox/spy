@@ -88,6 +88,7 @@ void strarr_set(struct strarr* dst, struct strarr* src);
 void strarr_move(struct strarr* dst, struct strarr* src);
 bool strarr_has(struct strarr* arr, const char* s);
 int strarr_seek(struct strarr* arr, const char* s);
+void strarr_shuffle(struct strarr* arr, int picks);
 void strarr_split(struct strarr* ret, const char* text, const char* sep);
 void strarr_clear(struct strarr*);
 
@@ -195,6 +196,10 @@ void cmd_pull(const char* filename, enum pull_mode);
 /* cmd_push.c */
 
 void cmd_push(const char* filename, bool dryrun);
+
+/* cmd_shuffle.c */
+
+void cmd_shuffle(const char* filename, int limit);
 
 /* cmd_sort.c */
 

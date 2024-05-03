@@ -75,3 +75,37 @@ void strarr_split(struct strarr* ret, const char* text, const char* sep)
 
 	free(temp);
 }
+
+static void __swap(struct strarr* arr, int a, int b)
+{
+	char* t = arr->data[a];
+	arr->data[a] = arr->data[b];
+	arr->data[b] = t;
+}
+
+static void __shift(struct strarr* arr, int from, int to)
+{
+	while (from > to) {
+		__swap(arr, from, from - 1);
+		from--;
+	}
+	while (from < to) {
+		__swap(arr, from, from + 1);
+		from++;
+	}
+}
+
+void strarr_shuffle(struct strarr* arr, int picks)
+{
+	srandom(time(NULL));
+
+	if (picks <= 0)
+		picks = arr->count - 1;
+
+	for (int i = 0; i < picks; i++) {
+		int avail = arr->count - i;
+		int pick = random() % avail;
+		if (pick != 0)
+			__shift(arr, pick + i, i);
+	}
+}

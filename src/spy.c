@@ -22,7 +22,9 @@ const char HELP[] =
 	"    spy push [--dryrun] <filename>\n"
 	"        Apply the local changes to remote playlist\n"
 	"    spy sort [--race] <filename>\n"
-	"        Rearrange the playlist\n";
+	"        Rearrange the playlist\n"
+	"    spy shuffle [<count>] <filename>\n"
+	"        Randomize the playlist\n";
 
 static int __argc;
 static char** __argv;
@@ -72,6 +74,10 @@ int main(int argc, char** argv)
 		cmd_sort(argv[2], SORT_MODE_DEFAULT);
 	else if (__match_flag("sort", "--race", 1))
 		cmd_pull(argv[3], SORT_MODE_RACE);
+	else if (__match("shuffle", 1))
+		cmd_shuffle(argv[2], 0);
+	else if (__match("shuffle", 2))
+		cmd_shuffle(argv[3], atoi(argv[2]));
 	else
 		printf("%s", HELP);
 }
