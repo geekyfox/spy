@@ -219,4 +219,8 @@ enum sort_mode {
 
 void cmd_sort(const char* filename, enum sort_mode);
 
+/* cmd_stats.c */
+
+void cmd_stats(const char* filename);
+
 #endif

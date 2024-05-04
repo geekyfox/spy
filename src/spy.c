@@ -26,7 +26,9 @@ const char HELP[] =
 	"    spy shuffle [<count>] <filename>\n"
 	"        Randomize the playlist\n"
 	"    spy log [--bump] <filename>\n"
-	"        Logs a listening session\n";
+	"        Logs a listening session\n"
+	"    spy stats <filename>\n"
+	"        Computes stats about remote playlist\n";
 
 static int __argc;
 static char** __argv;
@@ -84,6 +86,8 @@ int main(int argc, char** argv)
 		cmd_shuffle(argv[2], 0);
 	else if (__match("shuffle", 2))
 		cmd_shuffle(argv[3], atoi(argv[2]));
+	else if (__match("stats", 1))
+		cmd_stats(argv[2]);
 	else
 		printf("%s", HELP);
 }
