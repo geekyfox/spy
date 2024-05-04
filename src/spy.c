@@ -24,7 +24,9 @@ const char HELP[] =
 	"    spy sort [--race] <filename>\n"
 	"        Rearrange the playlist\n"
 	"    spy shuffle [<count>] <filename>\n"
-	"        Randomize the playlist\n";
+	"        Randomize the playlist\n"
+	"    spy log [--bump] <filename>\n"
+	"        Logs a listening session\n";
 
 static int __argc;
 static char** __argv;
@@ -62,6 +64,10 @@ int main(int argc, char** argv)
 		cmd_list();
 	else if (__match("fetch", 2))
 		cmd_fetch(argv[2], argv[3]);
+	else if (__match("log", 1))
+		cmd_log(argv[2], LOG_MODE_DUMP_UNTAGGED);
+	else if (__match_flag("log", "--bump", 1))
+		cmd_log(argv[3], LOG_MODE_BUMP_UNTAGGED);
 	else if (__match("pull", 1))
 		cmd_pull(argv[2], PULL_MODE_REMOTE_ORDER);
 	else if (__match_flag("pull", "--keep-order", 1))

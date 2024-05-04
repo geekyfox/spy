@@ -180,6 +180,15 @@ void cmd_fetch(const char* playlist_id, const char* filename);
 
 void cmd_list(void);
 
+/* cmd_log.c */
+
+enum log_mode {
+	LOG_MODE_DUMP_UNTAGGED = 43001,
+	LOG_MODE_BUMP_UNTAGGED = 43002,
+};
+
+void cmd_log(const char* filename, enum log_mode);
+
 /* cmd_login.c */
 
 void cmd_login(void);
