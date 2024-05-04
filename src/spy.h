@@ -172,9 +172,25 @@ void url_encode_pair(struct strbuff*, const char* key, const char* value);
 
 void validate_playlist(playlist_t, const char* source, int flags);
 
+/* cmd_add_all.c */
+
+void cmd_add_all(const char* src_filename, const char* dst_filename);
+
+/* cmd_clear.c */
+
+void cmd_clear(const char* filename);
+
 /* cmd_fetch.c */
 
 void cmd_fetch(const char* playlist_id, const char* filename);
+
+/* cmd_filter.c */
+
+void cmd_filter(const char* tag, const char* filename);
+
+/* cmd_fix.c */
+
+void cmd_fix(const char* filename);
 
 /* cmd_list.c */
 
@@ -222,5 +238,9 @@ void cmd_sort(const char* filename, enum sort_mode);
 /* cmd_stats.c */
 
 void cmd_stats(const char* filename);
+
+/* cmd_sync_tags.c */
+
+void cmd_sync_tags(const char* src, const char* dst);
 
 #endif
