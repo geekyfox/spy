@@ -49,12 +49,12 @@ static json_t __make(int typecode)
 	return ret;
 }
 
-json_t json_object()
+json_t jsobj_make()
 {
 	return __make(JSON_OBJECT);
 }
 
-void json_put(json_t obj, char* key, json_t value)
+void jsobj_put(json_t obj, char* key, json_t value)
 {
 	ASSERT_TYPE(obj, JSON_OBJECT);
 
@@ -67,7 +67,7 @@ void json_put(json_t obj, char* key, json_t value)
 	obj->value.object = new_obj;
 }
 
-json_t json_pop(json_t value, const char* key, bool* flagptr)
+json_t jsobj_pop(json_t value, const char* key, bool* flagptr)
 {
 	ASSERT_TYPE(value, JSON_OBJECT);
 
@@ -103,9 +103,9 @@ json_t json_pop(json_t value, const char* key, bool* flagptr)
 	DIE("Mandatory field '%s' not found", key);
 }
 
-char* json_popstr(json_t value, const char* key, bool* flagptr)
+char* jsobj_popstr(json_t value, const char* key, bool* flagptr)
 {
-	json_t item = json_pop(value, key, flagptr);
+	json_t item = jsobj_pop(value, key, flagptr);
 	if (! item)
 		return NULL;
 
@@ -114,9 +114,9 @@ char* json_popstr(json_t value, const char* key, bool* flagptr)
 	return ret;
 }
 
-double json_popnum(json_t value, const char* key, bool* flagptr)
+double jsobj_popnum(json_t value, const char* key, bool* flagptr)
 {
-	json_t item = json_pop(value, key, flagptr);
+	json_t item = jsobj_pop(value, key, flagptr);
 	if (! item)
 		return 0;
 
@@ -127,7 +127,38 @@ double json_popnum(json_t value, const char* key, bool* flagptr)
 	return ret;
 }
 
-json_t json_array(void)
+json_t jsobj_get(json_t value, const char* key, bool* flagptr)
+{
+	ASSERT_TYPE(value, JSON_OBJECT);
+
+	struct json_object* obj = value->value.object;
+
+	while (obj) {
+		if (! strcmp(obj->key, key))
+			return obj->value;
+		obj = obj->next;
+	}
+
+	if (flagptr) {
+		*flagptr = false;
+		return NULL;
+	}
+
+	DIE("Mandatory field '%s' not found", key);
+}
+
+char* jsobj_getstr(json_t value, const char* key, bool* flagptr)
+{
+	json_t item = jsobj_get(value, key, flagptr);
+	if (! item)
+		return NULL;
+
+	ASSERT_TYPE(item, JSON_STRING);
+
+	return item->value.string;
+}
+
+json_t jsarr_make(void)
 {
 	json_t ret = malloc(sizeof(struct json_value));
 	ret->typecode = JSON_ARRAY;
@@ -136,7 +167,7 @@ json_t json_array(void)
 	return ret;
 }
 
-void json_push(json_t value, json_t obj)
+void jsarr_push(json_t value, json_t obj)
 {
 	ASSERT_TYPE(value, JSON_ARRAY);
 
@@ -149,13 +180,13 @@ void json_push(json_t value, json_t obj)
 	arr->data[arr->count++] = obj;
 }
 
-size_t json_len(json_t arr)
+size_t jsarr_len(json_t arr)
 {
 	ASSERT_TYPE(arr, JSON_ARRAY);
 	return arr->value.array->count;
 }
 
-json_t json_get(json_t arr, size_t index)
+json_t jsarr_get(json_t arr, size_t index)
 {
 	ASSERT_TYPE(arr, JSON_ARRAY);
 	return arr->value.array->data[index];
@@ -256,7 +287,7 @@ void json_merge(json_t dst, json_t src)
 		struct json_array* src_arr = src->value.array;
 
 		for (int i = 0; i < src_arr->count; i++)
-			json_push(dst, src_arr->data[i]);
+			jsarr_push(dst, src_arr->data[i]);
 		src_arr->count = 0;
 
 		__reset(src);

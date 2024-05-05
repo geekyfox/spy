@@ -19,6 +19,8 @@ static playlist_t __shuffle_playlist(struct playlist* p, int picks)
 		playlist_add(ret, track);
 	}
 
+	strarr_clear(&ids);
+
 	return ret;
 }
 

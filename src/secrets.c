@@ -55,23 +55,23 @@ static void __read(void)
 	json_t value = fs_read_json(pathname);
 	bool flag;
 
-	the_client_id = json_popstr(value, "client_id", &flag);
+	the_client_id = jsobj_popstr(value, "client_id", &flag);
 	if (! flag)
 		DIE("'client_id' is missing in %s", pathname);
 
-	the_client_secret = json_popstr(value, "client_secret", &flag);
+	the_client_secret = jsobj_popstr(value, "client_secret", &flag);
 	if (! flag)
 		DIE("'client_secret' is missing in %s", pathname);
 
-	the_access_token = json_popstr(value, "access_token", &flag);
+	the_access_token = jsobj_popstr(value, "access_token", &flag);
 	if (! flag)
 		DIE("'access_token' is missing in %s", pathname);
 
-	the_refresh_token = json_popstr(value, "refresh_token", &flag);
+	the_refresh_token = jsobj_popstr(value, "refresh_token", &flag);
 	if (! flag)
 		DIE("'refresh_token' is missing in %s", pathname);
 
-	the_expires_at = json_popnum(value, "expires_at", &flag);
+	the_expires_at = jsobj_popnum(value, "expires_at", &flag);
 	if (! flag)
 		DIE("'expires_at' is missing in %s", pathname);
 
@@ -137,7 +137,7 @@ void __apply_response(struct strbuff* buff)
 	json_t value = json_parse(buff);
 
 	bool flag;
-	char* new_access_token = json_popstr(value, "access_token", &flag);
+	char* new_access_token = jsobj_popstr(value, "access_token", &flag);
 	if (flag) {
 		free(the_access_token);
 		the_access_token = new_access_token;
@@ -145,14 +145,14 @@ void __apply_response(struct strbuff* buff)
 		DIE("'access_token' is missing in %s", buff->data);
 	}
 
-	double expires_in = json_popnum(value, "expires_in", &flag);
+	double expires_in = jsobj_popnum(value, "expires_in", &flag);
 	if (flag) {
 		the_expires_at = time(NULL) + expires_in;
 	} else {
 		DIE("'expires_in' is missing in %s", buff->data);
 	}
 
-	char* new_refresh_token = json_popstr(value, "refresh_token", &flag);
+	char* new_refresh_token = jsobj_popstr(value, "refresh_token", &flag);
 	if (flag) {
 		free(the_refresh_token);
 		the_refresh_token = new_refresh_token;

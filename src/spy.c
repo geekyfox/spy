@@ -32,13 +32,13 @@ const char HELP[] =
 	"    spy sync-tags <source filename> <target filename>\n"
 	"        Syncs tags between two playlists\n"
 	"    spy add-all <source filename> <target filename>\n"
-        "        Adds tracks from one playlist to another\n"
+	"        Adds tracks from one playlist to another\n"
 	"    spy filter <tag> <filename>\n"
-        "        Keeps (or removes) tracks by tag\n"
+	"        Keeps (or removes) tracks by tag\n"
 	"    spy clear <filename>\n"
-        "        Clears playlist\n"
+	"        Clears playlist\n"
 	"    spy fix <filename>\n"
-        "        Fixes duplicates\n";
+	"        Fixes duplicates\n";
 
 static int __argc;
 static char** __argv;

@@ -98,7 +98,7 @@ static json_t __read(struct strbuff* s)
 
 static json_t __read_object(struct strbuff* s)
 {
-	json_t ret = json_object();
+	json_t ret = jsobj_make();
 
 	while (true) {
 		int token = __next_token(s);
@@ -119,7 +119,7 @@ static json_t __read_object(struct strbuff* s)
 			DIE("Malformed JSON");
 
 		json_t value = __read(s);
-		json_put(ret, key, value);
+		jsobj_put(ret, key, value);
 	}
 
 	return ret;
@@ -127,7 +127,7 @@ static json_t __read_object(struct strbuff* s)
 
 static json_t __read_array(struct strbuff* s)
 {
-	json_t ret = json_array();
+	json_t ret = jsarr_make();
 
 	int token = __next_token(s);
 	if (token == ']')
@@ -137,7 +137,7 @@ static json_t __read_array(struct strbuff* s)
 
 	while (true) {
 		json_t obj = __read(s);
-		json_push(ret, obj);
+		jsarr_push(ret, obj);
 
 		token = __next_token(s);
 

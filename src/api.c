@@ -39,25 +39,24 @@ static json_t __get(const char* path)
 
 json_t api_get_paginated(const char* path)
 {
-	json_t ret = json_array();
+	json_t ret = jsarr_make();
 	char* url = strdup(path);
 
 	while (url) {
 		json_t resp = __get(url);
 		free(url);
 
-		json_t page = json_pop(resp, "items", NULL);
+		json_t page = jsobj_get(resp, "items", NULL);
 		json_merge(ret, page);
-		json_free(page);
 
-		json_t next = json_pop(resp, "next", NULL);
-		json_free(resp);
+		json_t next = jsobj_get(resp, "next", NULL);
 
 		if (json_isnull(next))
 			url = NULL;
 		else
 			url = json_uwstr(next);
-		json_free(next);
+
+		json_free(resp);
 	}
 
 	return ret;
@@ -65,19 +64,19 @@ json_t api_get_paginated(const char* path)
 
 void __digest_track(track_t ret, json_t blob)
 {
-	json_t track = json_pop(blob, "track", NULL);
+	json_t track = jsobj_get(blob, "track", NULL);
 
 	bzero(ret, sizeof(*ret));
 
-	ret->id = json_popstr(track, "id", NULL);
-	ret->name = json_popstr(track, "name", NULL);
+	ret->id = jsobj_popstr(track, "id", NULL);
+	ret->name = jsobj_popstr(track, "name", NULL);
 
-	json_t artists = json_pop(track, "artists", NULL);
+	json_t artists = jsobj_get(track, "artists", NULL);
 
-	int count = json_len(artists);
+	int count = jsarr_len(artists);
 	for (int i = 0; i < count; i++) {
-		json_t artist = json_get(artists, i);
-		const char* name = json_popstr(artist, "name", NULL);
+		json_t artist = jsarr_get(artists, i);
+		char* name = jsobj_getstr(artist, "name", NULL);
 		strarr_add(&ret->artists, name);
 	}
 
@@ -93,10 +92,10 @@ playlist_t api_get_playlist(const char* id)
 	sprintf(path, "/playlists/%s/tracks", id);
 	json_t resp = api_get_paginated(path);
 
-	int count = json_len(resp);
+	int count = jsarr_len(resp);
 
 	for (int i = 0; i < count; i++) {
-		json_t blob = json_get(resp, i);
+		json_t blob = jsarr_get(resp, i);
 		struct track tr;
 		__digest_track(&tr, blob);
 		tr.remote_index = i + 1;

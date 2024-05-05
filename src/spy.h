@@ -111,16 +111,18 @@ void track_clear(track_t);
 
 bool json_isnull(json_t);
 
-json_t json_object(void);
-void json_put(json_t obj, char* key, json_t value);
-json_t json_pop(json_t value, const char* key, bool* flagptr);
-char* json_popstr(json_t json, const char* key, bool* flagptr);
-double json_popnum(json_t value, const char* key, bool* flagptr);
+json_t jsobj_make(void);
+void jsobj_put(json_t obj, char* key, json_t value);
+json_t jsobj_pop(json_t value, const char* key, bool* flagptr);
+char* jsobj_popstr(json_t json, const char* key, bool* flagptr);
+double jsobj_popnum(json_t value, const char* key, bool* flagptr);
+json_t jsobj_get(json_t json, const char* key, bool* flagptr);
+char* jsobj_getstr(json_t json, const char* key, bool* flagptr);
 
-json_t json_array(void);
-void json_push(json_t arr, json_t value);
-size_t json_len(json_t);
-json_t json_get(json_t arr, size_t index);
+json_t jsarr_make(void);
+void jsarr_push(json_t arr, json_t value);
+size_t jsarr_len(json_t);
+json_t jsarr_get(json_t arr, size_t index);
 
 json_t json_wstr(char* string);
 char* json_uwstr(json_t);
