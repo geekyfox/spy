@@ -3,106 +3,167 @@
 
 #include "spy.h"
 
-struct stats {
-	char* tags;
-	int count;
-	struct stats* next;
+struct context {
+	playlist_t playlist;
+	struct strarr tags;
+	int* stack;
+	int stack_ix;
 };
 
-static void __select(struct strbuff* buff, struct strarr* tags, int option)
+static void __gather_tags(struct context* ctx)
 {
-	for (int i = 0; i < tags->count; i++) {
-		int mask = 1 << i;
-		if (mask & option) {
-			strbuff_addz(buff, tags->data[i]);
-			strbuff_addch(buff, ' ');
+	track_t t = NULL;
+	while (playlist_iterate(&t, ctx->playlist)) {
+		for (int i = 0; i < t->tags.count; i++) {
+			const char* tag = t->tags.data[i];
+			if (strarr_has(&ctx->tags, tag))
+				continue;
+			strarr_add(&ctx->tags, tag);
 		}
 	}
-	buff->wix--;
-	strbuff_addch(buff, '\0');
+
+	strarr_sort(&ctx->tags);
+
+	if (! ctx->playlist->sort_order)
+		return;
+
+	struct strarr sort_order;
+	strarr_split(&sort_order, ctx->playlist->sort_order, " ");
+
+	int fill = 0;
+
+	for (int i = 0; i < sort_order.count; i++) {
+		int index = strarr_seek(&ctx->tags, sort_order.data[i]);
+		if (index < 0)
+			continue;
+		strarr_shift(&ctx->tags, index, fill);
+		fill++;
+	}
+
+	strarr_clear(&sort_order);
 }
 
-static void __increment(struct stats** head_ptr, const char* tags)
+static bool __push(struct context* ctx, int tagix)
 {
-	struct stats* prev = NULL;
-	struct stats* curr = *head_ptr;
+	for (int i = 0; i < ctx->stack_ix; i++)
+		if (ctx->stack[i] == tagix)
+			return false;
+	ctx->stack[ctx->stack_ix++] = tagix;
+	return true;
+}
 
-	while (curr != NULL) {
-		int cmp = strcmp(curr->tags, tags);
-		if (cmp == 0) {
-			curr->count++;
-			return;
+static void __pop(struct context* ctx, int tagix)
+{
+	if (ctx->stack_ix <= 0)
+		DIE("Buffer underflow");
+	ctx->stack_ix--;
+
+	int popix = ctx->stack[ctx->stack_ix];
+	if (popix != tagix)
+		DIE("Expected to pop %d, got %d", tagix, popix);
+}
+
+static bool __match(struct context* ctx, track_t t)
+{
+	for (int i = 0; i < ctx->stack_ix; i++) {
+		int tagix = ctx->stack[i];
+		const char* tag = ctx->tags.data[tagix];
+		if (! track_has_tag(t, tag))
+			return false;
+	}
+	return true;
+}
+
+static bool __match_exact(struct context* ctx, track_t t)
+{
+	if (t->tags.count != ctx->stack_ix)
+		return false;
+	return __match(ctx, t);
+}
+
+static int __count_total(struct context* ctx)
+{
+	int result = 0;
+	track_t t = NULL;
+	while (playlist_iterate(&t, ctx->playlist))
+		if (__match(ctx, t))
+			result++;
+	return result;
+}
+
+static int __count_leaf(struct context* ctx)
+{
+	int result = 0;
+	track_t t = NULL;
+	while (playlist_iterate(&t, ctx->playlist))
+		if (__match_exact(ctx, t))
+			result++;
+	return result;
+}
+
+static void __pad(int count)
+{
+	for (int i = count * 4; i > 0; i--)
+		fputc(' ', stdout);
+}
+
+static void __say_total(struct context* ctx, int total)
+{
+	__pad(ctx->stack_ix - 1);
+	int tagix = ctx->stack[ctx->stack_ix - 1];
+	const char* tag = ctx->tags.data[tagix];
+	printf("%s : %d\n", tag, total);
+}
+
+static void __say_leaf(struct context* ctx, int total)
+{
+	__pad(ctx->stack_ix);
+	printf("* : %d\n", total);
+}
+
+static void __analyze(struct context* ctx)
+{
+	for (int i = 0; i < ctx->tags.count; i++) {
+		if (! __push(ctx, i))
+			continue;
+
+		int total = __count_total(ctx);
+		if (total == 0) {
+			__pop(ctx, i);
+			continue;
 		}
 
-		if (cmp > 0)
-			break;
+		__say_total(ctx, total);
 
-		prev = curr;
-		curr = curr->next;
+		int leaf = __count_leaf(ctx);
+
+		if (leaf == total) {
+			__pop(ctx, i);
+			continue;
+		}
+
+		if (leaf > 0)
+			__say_leaf(ctx, leaf);
+
+		__analyze(ctx);
+		__pop(ctx, i);
 	}
-
-	struct stats* new = malloc(sizeof(struct stats));
-	new->tags = strdup(tags);
-	new->count = 1;
-	new->next = curr;
-
-	if (prev == NULL)
-		*head_ptr = new;
-	else
-		prev->next = new;
-}
-
-static void __count(struct stats** stptr, track_t t)
-{
-	struct strarr* tags = &t->tags;
-	// strarr_sort(tags);
-
-	int options = 1 << tags->count;
-
-	struct strbuff buff;
-	bzero(&buff, sizeof(buff));
-
-	for (int i = options - 1; i < options; i++) {
-		__select(&buff, tags, i);
-		__increment(stptr, buff.data);
-		buff.wix = 0;
-	}
-
-	free(buff.data);
 }
 
 void cmd_stats(const char* filename)
 {
 	playlist_t playlist = playlist_read(filename, 0);
 
-	struct stats* st = NULL;
+	struct context ctx;
+	bzero(&ctx, sizeof(ctx));
+	ctx.playlist = playlist;
+	__gather_tags(&ctx);
 
-	track_t t = NULL;
+	ctx.stack = malloc(sizeof(int) * ctx.tags.count);
 
-	while (playlist_iterate(&t, playlist))
-		__count(&st, t);
+	__analyze(&ctx);
 
-	struct stats* iter = st;
-	int maxlen = 0;
-
-	iter = st;
-	while (iter) {
-		int len = strlen(iter->tags);
-		if (len > maxlen)
-			maxlen = len;
-		iter = iter->next;
-	}
-
-	iter = st;
-	while (iter) {
-		int len = strlen(iter->tags);
-
-		printf("%s", iter->tags);
-		for (int i = len; i < maxlen; i++)
-			printf(" ");
-		printf(" : %d\n", iter->count);
-		iter = iter->next;
-	}
-
+	free(ctx.stack);
 	playlist_free(playlist);
+	strarr_clear(&ctx.tags);
 }

@@ -91,6 +91,8 @@ int strarr_seek(struct strarr* arr, const char* s);
 void strarr_shuffle(struct strarr* arr, int picks);
 void strarr_split(struct strarr* ret, const char* text, const char* sep);
 void strarr_clear(struct strarr*);
+void strarr_shift(struct strarr* arr, int from, int to);
+void strarr_sort(struct strarr* arr);
 
 /* strbuff.c : dynamic string buffer */
 

@@ -83,7 +83,7 @@ static void __swap(struct strarr* arr, int a, int b)
 	arr->data[b] = t;
 }
 
-static void __shift(struct strarr* arr, int from, int to)
+void strarr_shift(struct strarr* arr, int from, int to)
 {
 	while (from > to) {
 		__swap(arr, from, from - 1);
@@ -106,6 +106,16 @@ void strarr_shuffle(struct strarr* arr, int picks)
 		int avail = arr->count - i;
 		int pick = random() % avail;
 		if (pick != 0)
-			__shift(arr, pick + i, i);
+			strarr_shift(arr, pick + i, i);
 	}
+}
+
+static int __compare(const void* px, const void* py)
+{
+	return strcmp(*(const char**)px, *(const char**)py);
+}
+
+void strarr_sort(struct strarr* arr)
+{
+	qsort(arr->data, arr->count, sizeof(char*), __compare);
 }
