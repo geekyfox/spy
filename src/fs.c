@@ -1,7 +1,10 @@
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/stat.h>
 
 #include "spy.h"
 
@@ -56,6 +59,25 @@ static void __write_track(FILE* f, struct track* tr, int index)
 	fprintf(f, "\n\n");
 }
 
+static char* __resolve(const char* filename)
+{
+	struct stat stat;
+	if (lstat(filename, &stat) < 0) {
+		if (errno == ENOENT)
+			return strdup(filename);
+		DIE("lstat() failed: %m");
+	}
+
+	if ((stat.st_mode & S_IFMT) != S_IFLNK)
+		return strdup(filename);
+
+	char* result = realpath(filename, NULL);
+	if (! result)
+		DIE("realpath() failed: %m");
+
+	return result;
+}
+
 void fs_write_playlist(playlist_t p, const char* filename)
 {
 	char tmpfile[10240];
@@ -80,7 +102,10 @@ void fs_write_playlist(playlist_t p, const char* filename)
 	}
 
 	fclose(f);
-	rename(tmpfile, filename);
+
+	char* real_filename = __resolve(filename);
+	rename(tmpfile, real_filename);
+	free(real_filename);
 }
 
 static void __trim_right(char* buff)
