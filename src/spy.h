@@ -247,4 +247,8 @@ void cmd_stats(const char* filename);
 
 void cmd_sync_tags(const char* src, const char* dst);
 
+/* cmd_xor.c */
+
+int cmd_xor(char** args);
+
 #endif

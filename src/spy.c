@@ -65,8 +65,21 @@ static bool __match_flag(const char* name, const char* flag, int argct)
 	return true;
 }
 
+static void __help(void)
+{
+	printf("%s", HELP);
+
+	exit(1);
+}
+
 int main(int argc, char** argv)
 {
+	if (argc == 1)
+		__help();
+
+	if (! strcmp(argv[1], "xor"))
+		return cmd_xor(argv + 2);
+
 	__argv = argv;
 	__argc = argc;
 
@@ -109,5 +122,5 @@ int main(int argc, char** argv)
 	else if (__match("sync-tags", 2))
 		cmd_sync_tags(argv[2], argv[3]);
 	else
-		printf("%s", HELP);
+		__help();
 }

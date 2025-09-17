@@ -1,3 +1,5 @@
 build/
 spy
 *.playlist
+*swp
+patch
