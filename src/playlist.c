@@ -110,3 +110,13 @@ void playlist_pack(playlist_t p)
 
 	p->count = wix;
 }
+
+int playlist_cutoff(playlist_t p)
+{
+	for (int i = 0; i < p->count; i++) {
+		if (track_remove_tag(&p->tracks[i], "cutoff!"))
+			return i;
+	}
+
+	return -1;
+}

@@ -79,6 +79,7 @@ bool playlist_iterate(track_t* tptr, playlist_t p);
 track_t playlist_lookup(playlist_t p, const char* track_id);
 playlist_t playlist_read(const char* filename, int flags);
 void playlist_pack(playlist_t);
+int playlist_cutoff(playlist_t);
 void playlist_free(playlist_t);
 
 /* strarr.c */
@@ -184,6 +185,10 @@ void cmd_add_all(const char* src_filename, const char* dst_filename);
 
 void cmd_clear(const char* filename);
 
+/* cmd_drop.c */
+
+int cmd_drop(char** args);
+
 /* cmd_fetch.c */
 
 void cmd_fetch(const char* playlist_id, const char* filename);
@@ -246,6 +251,10 @@ void cmd_stats(const char* filename);
 /* cmd_sync_tags.c */
 
 void cmd_sync_tags(const char* src, const char* dst);
+
+/* cmd_take.c */
+
+int cmd_take(char** args);
 
 /* cmd_xor.c */
 
