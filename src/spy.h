@@ -231,6 +231,10 @@ void cmd_pull(const char* filename, enum pull_mode);
 
 void cmd_push(const char* filename, bool dryrun);
 
+/* cmd_reverse.c */
+
+int cmd_reverse(char** args);
+
 /* cmd_shuffle.c */
 
 void cmd_shuffle(const char* filename, int limit);

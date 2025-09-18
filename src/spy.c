@@ -79,6 +79,8 @@ int main(int argc, char** argv)
 
 	if (! strcmp(argv[1], "drop"))
 		return cmd_drop(argv + 2);
+	if (! strcmp(argv[1], "reverse"))
+		return cmd_reverse(argv + 2);
 	if (! strcmp(argv[1], "take"))
 		return cmd_take(argv + 2);
 	if (! strcmp(argv[1], "xor"))
