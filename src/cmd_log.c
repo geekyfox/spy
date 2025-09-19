@@ -36,6 +36,7 @@ void __cleave(struct context* ctx)
 {
 	struct strarr* untagged = __pick_untagged(ctx);
 	playlist_t p = ctx->source;
+	int cutoff = playlist_cutoff(p) + 1;
 
 	for (int i = 0; i < p->count; i++) {
 		track_t t = &p->tracks[i];
@@ -46,7 +47,7 @@ void __cleave(struct context* ctx)
 			accum = &ctx->bump;
 		else if (track_has_tag(t, "dump!"))
 			accum = &ctx->dump;
-		else if (i < p->separator)
+		else if (i < cutoff)
 			accum = untagged;
 		else
 			accum = &ctx->bulk;

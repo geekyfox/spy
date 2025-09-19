@@ -95,11 +95,8 @@ void fs_write_playlist(playlist_t p, const char* filename)
 
 	fprintf(f, "\n");
 
-	for (int i = 0; i < p->count; i++) {
-		if (p->separator == i)
-			fprintf(f, "----\n\n");
+	for (int i = 0; i < p->count; i++)
 		__write_track(f, &p->tracks[i], i + 1);
-	}
 
 	fclose(f);
 
@@ -208,14 +205,6 @@ static void __parse_line(const char* line, int line_index, struct playlist* p,
 			fprintf(stderr, "Line %d is bad", line_index);
 		else
 			t->id = strdup(line + 2);
-		return;
-	}
-
-	if (strncmp(line, "----", 4) == 0) {
-		if (p->separator >= 0)
-			fprintf(stderr, "Line %d is bad", line_index);
-		else
-			p->separator = p->count;
 		return;
 	}
 

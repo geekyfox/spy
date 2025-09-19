@@ -7,7 +7,6 @@ playlist_t playlist_init(playlist_t original)
 {
 	playlist_t ret = malloc(sizeof(*ret));
 	bzero(ret, sizeof(*ret));
-	ret->separator = -1;
 
 	if (original) {
 		if (original->playlist_id)

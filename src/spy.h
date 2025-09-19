@@ -50,7 +50,6 @@ struct playlist {
 	struct track* tracks;
 	size_t count;
 	size_t alc;
-	int separator;
 	struct strarr aliases;
 };
 
