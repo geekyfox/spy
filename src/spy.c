@@ -79,6 +79,8 @@ int main(int argc, char** argv)
 
 	if (! strcmp(argv[1], "drop"))
 		return cmd_drop(argv + 2);
+	if (! strcmp(argv[1], "or"))
+		return cmd_or(argv + 2);
 	if (! strcmp(argv[1], "reverse"))
 		return cmd_reverse(argv + 2);
 	if (! strcmp(argv[1], "take"))
@@ -89,9 +91,7 @@ int main(int argc, char** argv)
 	__argv = argv;
 	__argc = argc;
 
-	if (__match("add-all", 2))
-		cmd_add_all(argv[2], argv[3]);
-	else if (__match("clear", 1))
+	if (__match("clear", 1))
 		cmd_clear(argv[2]);
 	else if (__match("fetch", 2))
 		cmd_fetch(argv[2], argv[3]);

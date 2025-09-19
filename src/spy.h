@@ -176,10 +176,6 @@ void url_encode_pair(struct strbuff*, const char* key, const char* value);
 
 void validate_playlist(playlist_t, const char* source, int flags);
 
-/* cmd_add_all.c */
-
-void cmd_add_all(const char* src_filename, const char* dst_filename);
-
 /* cmd_clear.c */
 
 void cmd_clear(const char* filename);
@@ -216,6 +212,10 @@ void cmd_log(const char* filename, enum log_mode);
 /* cmd_login.c */
 
 void cmd_login(void);
+
+/* cmd_or.c */
+
+int cmd_or(char** args);
 
 /* cmd_pull.c */
 
