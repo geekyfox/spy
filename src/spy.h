@@ -219,12 +219,7 @@ int cmd_or(char** args);
 
 /* cmd_pull.c */
 
-enum pull_mode {
-	PULL_MODE_REMOTE_ORDER = 44001,
-	PULL_MODE_LOCAL_ORDER = 44002,
-};
-
-void cmd_pull(const char* filename, enum pull_mode);
+int cmd_pull(char** args);
 
 /* cmd_push.c */
 
