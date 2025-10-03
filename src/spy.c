@@ -85,6 +85,8 @@ int main(int argc, char** argv)
 		return cmd_pull(argv + 2);
 	if (! strcmp(argv[1], "reverse"))
 		return cmd_reverse(argv + 2);
+	if (! strcmp(argv[1], "tag"))
+		return cmd_tag(argv + 2);
 	if (! strcmp(argv[1], "take"))
 		return cmd_take(argv + 2);
 	if (! strcmp(argv[1], "xor"))

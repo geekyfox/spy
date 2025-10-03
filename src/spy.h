@@ -254,6 +254,10 @@ void cmd_sync_tags(const char* src, const char* dst);
 
 int cmd_take(char** args);
 
+/* cmd_tag.c */
+
+int cmd_tag(char** args);
+
 /* cmd_xor.c */
 
 int cmd_xor(char** args);
