@@ -7,7 +7,9 @@ struct context {
 	struct strarr remove;
 	struct strarr files;
 	bool infer;
+	bool clear;
 	bool need_help;
+	struct strarr sort_order;
 };
 
 static bool __nothing_to_do(struct context* ctx)
@@ -24,6 +26,9 @@ static bool __nothing_to_do(struct context* ctx)
 	if (ctx->infer)
 		return false;
 
+	if (ctx->clear)
+		return false;
+
 	return true;
 }
 
@@ -36,6 +41,8 @@ static void __parse_args(struct context* ctx, char** args)
 			ctx->need_help = true;
 		else if (! strcmp(arg, "--infer"))
 			ctx->infer = true;
+		else if (! strcmp(arg, "--clear"))
+			ctx->clear = true;
 		else if (arg[0] == '+')
 			strarr_add(&ctx->add, arg + 1);
 		else if (arg[0] == '-')
@@ -49,33 +56,26 @@ static void __parse_args(struct context* ctx, char** args)
 		ctx->need_help = true;
 }
 
-static void __infer(playlist_t playlist, const char* filename)
+static void __prep_infer(struct context* ctx, playlist_t p, const char* fname)
 {
-	struct strarr tags;
-	bzero(&tags, sizeof(tags));
+	if (p->sort_order) {
+		strarr_split(&ctx->sort_order, p->sort_order, " ");
 
-	if (! playlist->sort_order)
-		goto skip;
-
-	strarr_split(&tags, playlist->sort_order, " ");
-
-	int tag_count = tags.count;
-
-	if (tag_count < 1)
-		goto skip;
-
-	for (int i = 0; i < playlist->count; i++) {
-		track_t track = &playlist->tracks[i];
-		track_add_tag(track, tags.data[i % tag_count]);
+		if (ctx->sort_order.count >= 1)
+			return;
 	}
 
-	goto clean;
-
-skip:
-	fprintf(stderr, "Playlist %s has no sort_order", filename);
+	fprintf(stderr, "Playlist %s has no sort_order", fname);
 	fprintf(stderr, ", --infer option will be ignored\n");
-clean:
-	strarr_clear(&tags);
+
+	strarr_clear(&ctx->sort_order);
+}
+
+static void __infer(struct context* ctx, track_t t, int track_index)
+{
+	int tag_index = track_index % ctx->sort_order.count;
+	const char* tag = ctx->sort_order.data[tag_index];
+	track_add_tag(t, tag);
 }
 
 static void __tag(struct context* ctx, const char* filename)
@@ -83,20 +83,27 @@ static void __tag(struct context* ctx, const char* filename)
 	playlist_t playlist = playlist_read(filename, 0);
 
 	if (ctx->infer)
-		__infer(playlist, filename);
+		__prep_infer(ctx, playlist, filename);
 
 	for (int i = 0; i < playlist->count; i++) {
 		track_t track = &playlist->tracks[i];
 
-		for (int j = 0; j < ctx->add.count; j++)
-			track_add_tag(track, ctx->add.data[j]);
+		if (ctx->clear)
+			strarr_clear(&track->tags);
 
 		for (int j = 0; j < ctx->remove.count; j++)
 			track_remove_tag(track, ctx->remove.data[j]);
+
+		for (int j = 0; j < ctx->add.count; j++)
+			track_add_tag(track, ctx->add.data[j]);
+
+		if (ctx->infer)
+			__infer(ctx, track, i);
 	}
 
 	fs_write_playlist(playlist, filename);
 	playlist_free(playlist);
+	strarr_clear(&ctx->sort_order);
 }
 
 static void __cleanup(struct context* ctx)
