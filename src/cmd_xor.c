@@ -1,16 +1,24 @@
 #include "spy.h"
 #include <string.h>
 
+static const char HELP[] =
+	"Usage:\n"
+	"    spy xor <file A> <file B>\n"
+	"\n"
+	"Compares two playlists and make <file A> contain all tracks\n"
+	"that are in either <file A> or <file B> but not both.\n";
+
 struct context {
-	int retcode;
 	char* name_a;
 	char* name_b;
+	bool only_us;
 	playlist_t us;
 	playlist_t them;
 	playlist_t res;
 };
 
-static void __digest_args(struct context*, char**);
+static int __digest_args(struct context*, char**);
+static void __show_help(int retcode);
 static void __init(struct context*);
 static void __add_us(struct context*);
 static void __add_them(struct context*);
@@ -21,48 +29,60 @@ int cmd_xor(char** args)
 	struct context ctx;
 	bzero(&ctx, sizeof(ctx));
 
-	__digest_args(&ctx, args);
+	int retcode = __digest_args(&ctx, args);
+	if (retcode >= 0)
+		__show_help(retcode);
+
 	__init(&ctx);
 	__add_us(&ctx);
-	__add_them(&ctx);
+
+	if (! ctx.only_us)
+		__add_them(&ctx);
+
 	__flush(&ctx);
 
 	return 0;
 }
 
-static void __digest_args(struct context* ctx, char** args)
+static int __digest_args(struct context* ctx, char** args)
 {
-	if (! args[0])
-		goto bad;
+	if (! *args)
+		return 1;
 
-	if (! strcmp(args[0], "--help"))
-		goto help;
+	if (! strcmp(*args, "--help"))
+		return 0;
 
-	if (! args[1])
-		goto bad;
+	if (! strcmp(*args, "--only-us")) {
+		ctx->only_us = true;
+		args++;
+	}
 
-	if (args[2])
-		goto bad;
+	if (! *args)
+		return 1;
 
-	ctx->name_a = args[0];
-	ctx->name_b = args[1];
+	ctx->name_a = *args;
+	args++;
 
-	return;
+	if (! *args)
+		return 1;
 
-	static const char HELP[] =
-		"Usage:\n"
-		"    spy xor <file A> <file B>\n"
-		"\n"
-		"Compares two playlists and make <file A> contain all tracks\n"
-		"that are in either <file A> or <file B> but not both.\n";
+	ctx->name_b = *args;
+	args++;
 
-bad:
-	fputs(HELP, stderr);
-	exit(1);
+	if (*args)
+		return 1;
 
-help:
-	fputs(HELP, stdout);
-	exit(0);
+	return -1;
+}
+
+static void __show_help(int retcode)
+{
+	if (retcode > 0)
+		fputs(HELP, stderr);
+	else
+		fputs(HELP, stdout);
+
+	exit(retcode);
 }
 
 static void __init(struct context* ctx)
@@ -79,7 +99,9 @@ static void __add_us(struct context* ctx)
 		if (playlist_lookup(ctx->them, t->id))
 			continue;
 
-		track_add_tag(t, "us");
+		if (! ctx->only_us)
+			track_add_tag(t, "us");
+
 		track_remove_tag(t, "them");
 		playlist_add(ctx->res, t);
 	}
