@@ -85,6 +85,8 @@ int main(int argc, char** argv)
 		return cmd_pull(argv + 2);
 	if (! strcmp(argv[1], "reverse"))
 		return cmd_reverse(argv + 2);
+	if (! strcmp(argv[1], "sort"))
+		return cmd_sort(argv + 2);
 	if (! strcmp(argv[1], "tag"))
 		return cmd_tag(argv + 2);
 	if (! strcmp(argv[1], "take"))
@@ -115,10 +117,6 @@ int main(int argc, char** argv)
 		cmd_push(argv[2], false);
 	else if (__match_flag("push", "--dryrun", 1))
 		cmd_push(argv[3], true);
-	else if (__match("sort", 1))
-		cmd_sort(argv[2], SORT_MODE_DEFAULT);
-	else if (__match_flag("sort", "--race", 1))
-		cmd_sort(argv[3], SORT_MODE_RACE);
 	else if (__match("shuffle", 1))
 		cmd_shuffle(argv[2], 0);
 	else if (__match("shuffle", 2))

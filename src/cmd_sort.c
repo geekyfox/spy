@@ -5,11 +5,19 @@
 
 #include "spy.h"
 
+enum sort_mode {
+	SORT_MODE_DEFAULT = 45001,
+	SORT_MODE_RACE = 45002,
+	SORT_MODE_TRIAL = 45003,
+};
+
 struct context {
+	enum sort_mode mode;
 	playlist_t source;
 	playlist_t ret;
 	int spacing;
 	struct strarr* tags;
+	int tag_count;
 	int wanted_tag;
 	int skipped_tags;
 };
@@ -35,7 +43,7 @@ static bool __have_same_artists(struct context* ctx, track_t tx, track_t ty)
 
 		if (strarr_has(xs, p) && strarr_has(ys, q))
 			return true;
-		if (strarr_has(xs, q) && strarr_has(xs, p))
+		if (strarr_has(xs, q) && strarr_has(ys, p))
 			return true;
 	}
 
@@ -70,12 +78,6 @@ static bool __names_overlap(struct context* ctx, track_t t)
 
 static bool __tags_match(struct context* ctx, track_t t)
 {
-	if (track_has_tag(t, "new?"))
-		return ctx->wanted_tag == -1;
-
-	if (ctx->wanted_tag == -1)
-		return false;
-
 	if (! ctx->tags)
 		return true;
 
@@ -88,116 +90,162 @@ static bool __track_fits(struct context* ctx, track_t t)
 	if (! t->id)
 		return false;
 
+	if (! __tags_match(ctx, t))
+		return false;
+
 	if (__artists_overlap(ctx, t))
 		return false;
 
 	if (__names_overlap(ctx, t))
 		return false;
 
-	return __tags_match(ctx, t);
+	return true;
 }
 
-static track_t __pick_track_trial(struct context* ctx)
+static track_t __pick_track_default(struct context* ctx)
 {
-	int spacing = ctx->tags ? ctx->tags->count : 1;
-	int i = ctx->ret->count - spacing;
-
-	if (i < 0)
-		return NULL;
-
-	for (; i < ctx->ret->count; i++) {
-		if (track_has_tag(&ctx->ret->tracks[i], "new?"))
-			return false;
-		if (track_has_tag(&ctx->ret->tracks[i], "maybe?"))
-			return false;
-	}
-
 	track_t t = NULL;
-	while (playlist_iterate(&t, ctx->source))
-		if (track_has_tag(t, "new?") && __track_fits(ctx, t))
+	while (playlist_iterate(&t, ctx->source)) {
+		if (__track_fits(ctx, t))
 			return t;
-
-	t = NULL;
-	while (playlist_iterate(&t, ctx->source))
-		if (track_has_tag(t, "maybe?") && __track_fits(ctx, t))
-			return t;
-
+	}
 	return NULL;
 }
 
 static track_t __pick_track_race(struct context* ctx)
 {
-	track_t t = NULL;
+	track_t not_yes = NULL, t = NULL;
 
 	while (playlist_iterate(&t, ctx->source)) {
-		if (track_has_tag(t, "new?"))
+		if (! __track_fits(ctx, t))
 			continue;
-		if (track_has_tag(t, "maybe?"))
-			continue;
-		if (__track_fits(ctx, t))
+
+		if (track_has_tag(t, "yes"))
 			return t;
+
+		if (! not_yes)
+			not_yes = t;
 	}
 
-	return NULL;
+	return not_yes;
 }
 
-static track_t __pick_track(struct context* ctx, enum sort_mode mode)
+static bool __trial_wants_yes(struct context* ctx)
 {
-	track_t t;
-	switch (mode) {
-	case SORT_MODE_DEFAULT:
-		if ((t = __pick_track_trial(ctx)))
-			return t;
-	case SORT_MODE_RACE:
-		if ((t = __pick_track_race(ctx)))
-			return t;
-		return NULL;
-	default:
-		DIE("Invalid sort mode %d", mode);
+	track_t tracks = ctx->ret->tracks;
+	int count = ctx->ret->count;
+
+	if (count < 2)
+		return true;
+	if (! track_has_tag(&tracks[count - 1], "yes"))
+		return true;
+	if (! track_has_tag(&tracks[count - 2], "yes"))
+		return true;
+
+	if ((! ctx->tags) || (ctx->tags->count < 2))
+		return false;
+
+	const char* tag = ctx->tags->data[ctx->wanted_tag];
+	int tag_reps = 0;
+
+	for (int i = ctx->tags->count - 1; i >= 0; i--)
+		if (! strcmp(tag, ctx->tags->data[i]))
+			tag_reps++;
+
+	for (int i = count - 1; i >= 0; i--) {
+		if (! track_has_tag(&tracks[i], tag))
+			continue;
+		if (! track_has_tag(&tracks[i], "yes"))
+			return true;
+		tag_reps--;
+		if (tag_reps == 0)
+			return false;
 	}
+
+	return false;
+}
+
+static track_t __pick_track_trial(struct context* ctx)
+{
+	bool wants_yes = __trial_wants_yes(ctx);
+
+	track_t t = NULL, result = NULL;
+
+	while (playlist_iterate(&t, ctx->source)) {
+		if (! __track_fits(ctx, t))
+			continue;
+		if (track_has_tag(t, "yes") == wants_yes)
+			return t;
+		if (! result)
+			result = t;
+	}
+
+	return result;
+}
+
+static track_t __pick_track(struct context* ctx)
+{
+	switch (ctx->mode) {
+	case SORT_MODE_DEFAULT:
+		return __pick_track_default(ctx);
+	case SORT_MODE_RACE:
+		return __pick_track_race(ctx);
+	case SORT_MODE_TRIAL:
+		return __pick_track_trial(ctx);
+	default:
+		DIE("Invalid sort mode %d", ctx->mode);
+	}
+}
+
+static void __increment_wanted_tag(struct context* ctx)
+{
+	ctx->wanted_tag = (ctx->wanted_tag + 1) % ctx->tag_count;
 }
 
 static void __record_hit(struct context* ctx)
 {
 	ctx->skipped_tags = 0;
-	ctx->wanted_tag++;
-
-	int tag_count = ctx->tags ? ctx->tags->count : 1;
-	if (ctx->wanted_tag == tag_count)
-		ctx->wanted_tag = -1;
+	__increment_wanted_tag(ctx);
 }
 
 static bool __record_miss(struct context* ctx)
 {
-	if (ctx->wanted_tag == -1) {
-		ctx->skipped_tags = 0;
-		ctx->wanted_tag = 0;
-		return true;
-	}
-
 	ctx->skipped_tags++;
-	ctx->wanted_tag++;
-
-	int tag_count = ctx->tags ? ctx->tags->count : 1;
-
-	if (ctx->skipped_tags == tag_count)
+	if (ctx->skipped_tags == ctx->tag_count)
 		return false;
 
-	if (ctx->wanted_tag == tag_count)
-		ctx->wanted_tag = -1;
-
+	__increment_wanted_tag(ctx);
 	return true;
 }
 
-void cmd_sort(const char* filename, enum sort_mode mode)
+int cmd_sort(char** args)
 {
+	enum sort_mode mode = SORT_MODE_DEFAULT;
+	const char* filename = NULL;
+
+	while (! filename) {
+		if (! *args)
+			return 1;
+
+		if (! strcmp(*args, "--race"))
+			mode = SORT_MODE_RACE;
+		else if (! strcmp(*args, "--trial"))
+			mode = SORT_MODE_TRIAL;
+		else
+			filename = *args;
+
+		args++;
+	}
+
 	playlist_t playlist = playlist_read(filename, 0);
 	playlist_t tmp = playlist_init(playlist);
 
 	struct context ctx = {
+		.mode = mode,
 		.ret = tmp,
 		.source = playlist,
 		.tags = NULL,
+		.tag_count = 1,
 		.spacing = playlist->same_artist_spacing,
 		.wanted_tag = 0,
 		.skipped_tags = 0,
@@ -207,14 +255,15 @@ void cmd_sort(const char* filename, enum sort_mode mode)
 	if (playlist->sort_order) {
 		strarr_split(&tags, playlist->sort_order, " ");
 		ctx.tags = &tags;
+		ctx.tag_count = tags.count;
 	}
 
 	bool keep_going = true;
 	while (keep_going) {
-		track_t t = __pick_track(&ctx, mode);
+		track_t t = __pick_track(&ctx);
 		if (t) {
-			__record_hit(&ctx);
 			playlist_add(tmp, t);
+			__record_hit(&ctx);
 		} else {
 			keep_going = __record_miss(&ctx);
 		}
@@ -235,4 +284,6 @@ void cmd_sort(const char* filename, enum sort_mode mode)
 	fs_write_playlist(playlist, filename);
 
 	playlist_free(playlist);
+
+	return 0;
 }

@@ -235,12 +235,7 @@ void cmd_shuffle(const char* filename, int limit);
 
 /* cmd_sort.c */
 
-enum sort_mode {
-	SORT_MODE_DEFAULT = 45001,
-	SORT_MODE_RACE = 45002,
-};
-
-void cmd_sort(const char* filename, enum sort_mode);
+int cmd_sort(char** args);
 
 /* cmd_stats.c */
 
