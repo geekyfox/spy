@@ -40,6 +40,12 @@ struct track {
 
 typedef struct track* track_t;
 
+struct tag_spacing {
+	char* tag;
+	int spacing;
+	struct tag_spacing* next;
+};
+
 struct playlist {
 	char* playlist_id;
 	char* sort_order;
@@ -51,6 +57,7 @@ struct playlist {
 	size_t count;
 	size_t alc;
 	struct strarr aliases;
+	struct tag_spacing* tag_spacing;
 };
 
 typedef struct playlist* playlist_t;

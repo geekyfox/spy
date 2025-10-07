@@ -125,6 +125,22 @@ static void __parse_aliases(playlist_t dst, const char* value)
 	strarr_clear(&tmp);
 }
 
+static void __parse_tag_spacing(playlist_t dst, const char* value)
+{
+	struct tag_spacing* new = malloc(sizeof(struct tag_spacing));
+
+	char* sep = strstr(value, " ");
+	if (! sep)
+		DIE("Malformed setting tag_spacing %s", value);
+
+	*sep = '\0';
+
+	new->tag = strdup(value);
+	new->spacing = atoi(sep + 1);
+	new->next = dst->tag_spacing;
+	dst->tag_spacing = new;
+}
+
 static void __read_header(struct playlist* dst, const char* buff)
 {
 	char* sep = strstr(buff, " ");
@@ -139,18 +155,20 @@ static void __read_header(struct playlist* dst, const char* buff)
 	*sep = '\0';
 	char* value = sep + 1;
 
-	if (strcmp(buff, "playlist_id") == 0)
+	if (! strcmp(buff, "playlist_id"))
 		dst->playlist_id = strdup(value);
-	else if (strcmp(buff, "sort_order") == 0)
+	else if (! strcmp(buff, "sort_order"))
 		dst->sort_order = strdup(value);
-	else if (strcmp(buff, "same_artist_spacing") == 0)
+	else if (! strcmp(buff, "same_artist_spacing"))
 		dst->same_artist_spacing = atoi(value);
-	else if (strcmp(buff, "bump_offset") == 0)
+	else if (! strcmp(buff, "bump_offset"))
 		dst->bump_offset = atoi(value);
-	else if (strcmp(buff, "bump_spacing") == 0)
+	else if (! strcmp(buff, "bump_spacing"))
 		dst->bump_spacing = atoi(value);
 	else if (! strcmp(buff, "alias"))
 		__parse_aliases(dst, value);
+	else if (! strcmp(buff, "tag_spacing"))
+		__parse_tag_spacing(dst, value);
 	else
 		DIE("Unknown setting %s %s", buff, value);
 }

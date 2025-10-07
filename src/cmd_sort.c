@@ -20,6 +20,7 @@ struct context {
 	int tag_count;
 	int wanted_tag;
 	int skipped_tags;
+	bool relaxed_fit;
 };
 
 static bool __have_same_artists(struct context* ctx, track_t tx, track_t ty)
@@ -85,6 +86,31 @@ static bool __tags_match(struct context* ctx, track_t t)
 	return track_has_tag(t, tag);
 }
 
+static bool __spaced_tags_overlap(struct context* ctx, track_t t)
+{
+	struct tag_spacing* ts = ctx->source->tag_spacing;
+
+	while (ts) {
+		if (! track_has_tag(t, ts->tag)) {
+			ts = ts->next;
+			continue;
+		}
+
+		int i = ctx->ret->count - ts->spacing;
+		if (i < 0)
+			i = 0;
+
+		for (; i < ctx->ret->count; i++) {
+			if (track_has_tag(&ctx->ret->tracks[i], ts->tag))
+				return true;
+		}
+
+		ts = ts->next;
+	}
+
+	return false;
+}
+
 static bool __track_fits(struct context* ctx, track_t t)
 {
 	if (! t->id)
@@ -93,10 +119,16 @@ static bool __track_fits(struct context* ctx, track_t t)
 	if (! __tags_match(ctx, t))
 		return false;
 
+	if (ctx->relaxed_fit)
+		return true;
+
 	if (__artists_overlap(ctx, t))
 		return false;
 
 	if (__names_overlap(ctx, t))
+		return false;
+
+	if (__spaced_tags_overlap(ctx, t))
 		return false;
 
 	return true;
@@ -242,13 +274,14 @@ int cmd_sort(char** args)
 
 	struct context ctx = {
 		.mode = mode,
-		.ret = tmp,
 		.source = playlist,
+		.ret = tmp,
+		.spacing = playlist->same_artist_spacing,
 		.tags = NULL,
 		.tag_count = 1,
-		.spacing = playlist->same_artist_spacing,
 		.wanted_tag = 0,
 		.skipped_tags = 0,
+		.relaxed_fit = false,
 	};
 
 	struct strarr tags;
@@ -260,13 +293,22 @@ int cmd_sort(char** args)
 
 	bool keep_going = true;
 	while (keep_going) {
+		ctx.relaxed_fit = false;
 		track_t t = __pick_track(&ctx);
 		if (t) {
 			playlist_add(tmp, t);
 			__record_hit(&ctx);
-		} else {
-			keep_going = __record_miss(&ctx);
+			continue;
 		}
+
+		ctx.relaxed_fit = true;
+		t = __pick_track(&ctx);
+		if (t) {
+			playlist_add(tmp, t);
+			__record_hit(&ctx);
+			continue;
+		}
+		keep_going = __record_miss(&ctx);
 	}
 
 	for (int i = 0; i < playlist->count; i++) {
