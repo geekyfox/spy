@@ -79,6 +79,8 @@ int main(int argc, char** argv)
 
 	if (! strcmp(argv[1], "drop"))
 		return cmd_drop(argv + 2);
+	if (! strcmp(argv[1], "filter"))
+		return cmd_filter(argv + 2);
 	if (! strcmp(argv[1], "or"))
 		return cmd_or(argv + 2);
 	if (! strcmp(argv[1], "pull"))
@@ -101,8 +103,6 @@ int main(int argc, char** argv)
 		cmd_clear(argv[2]);
 	else if (__match("fetch", 2))
 		cmd_fetch(argv[2], argv[3]);
-	else if (__match("filter", 2))
-		cmd_filter(argv[2], argv[3]);
 	else if (__match("fix", 1))
 		cmd_fix(argv[2]);
 	else if (__match("log", 1))

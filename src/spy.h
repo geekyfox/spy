@@ -197,7 +197,7 @@ void cmd_fetch(const char* playlist_id, const char* filename);
 
 /* cmd_filter.c */
 
-void cmd_filter(const char* tag, const char* filename);
+int cmd_filter(char** args);
 
 /* cmd_fix.c */
 
