@@ -169,6 +169,30 @@ void api_add_tracks(const char* playlist_id, const struct strarr* tracks)
 	free(req.data);
 }
 
+static void __make_remove_request(struct strbuff* req, struct strarr* tids)
+{
+	int count = 0;
+	req->wix = 0;
+
+	strbuff_addz(req, "{\"tracks\":[");
+
+	while (count < 50) {
+		const char* tid = strarr_pop(tids);
+		if (! tid)
+			break;
+
+		if (count != 0)
+			strbuff_addch(req, ',');
+		count++;
+
+		strbuff_addz(req, "{\"uri\":\"spotify:track:");
+		strbuff_addz(req, tid);
+		strbuff_addz(req, "\"}");
+	}
+
+	strbuff_addz(req, "]}\0");
+}
+
 void api_remove_tracks(const char* playlist_id, const struct strarr* track_ids)
 {
 	char path[10240];
@@ -176,16 +200,13 @@ void api_remove_tracks(const char* playlist_id, const struct strarr* track_ids)
 
 	struct strbuff req;
 	bzero(&req, sizeof(req));
-	strbuff_addz(&req, "{\n    \"tracks\":\n        [");
 
-	for (int i = 0; i < track_ids->count; i++) {
-		if (i != 0)
-			strbuff_addch(&req, ',');
-		strbuff_addz(&req, "\n        {\"uri\":\"spotify:track:");
-		strbuff_addz(&req, track_ids->data[i]);
-		strbuff_addz(&req, "\"}");
+	struct strarr tids = *track_ids;
+
+	while (tids.count > 0) {
+		__make_remove_request(&req, &tids);
+		__delete(path, req.data);
 	}
-	strbuff_addz(&req, "]}\0");
 
-	__delete(path, req.data);
+	free(req.data);
 }

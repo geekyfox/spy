@@ -100,6 +100,7 @@ void strarr_split(struct strarr* ret, const char* text, const char* sep);
 void strarr_clear(struct strarr*);
 void strarr_shift(struct strarr* arr, int from, int to);
 void strarr_sort(struct strarr* arr);
+char* strarr_pop(struct strarr* arr);
 
 /* strbuff.c : dynamic string buffer */
 

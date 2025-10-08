@@ -119,3 +119,12 @@ void strarr_sort(struct strarr* arr)
 {
 	qsort(arr->data, arr->count, sizeof(char*), __compare);
 }
+
+char* strarr_pop(struct strarr* arr)
+{
+	if (arr->count == 0)
+		return NULL;
+
+	arr->count--;
+	return arr->data[arr->count];
+}
