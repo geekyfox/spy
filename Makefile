@@ -2,11 +2,11 @@ SRCS := $(wildcard src/*.c)
 OBJS := $(patsubst src/%.c,build/%.o,$(SRCS))
 
 spy: $(OBJS)
-	gcc -g -o spy $(OBJS) -lcurl
+	gcc --std=gnu99 -g -o spy $(OBJS) -lcurl
 
 build/%.o: src/%.c src/spy.h
 	@mkdir -p build
-	gcc -Wall -g -c -o $@ $<
+	gcc --std=gnu99 -Wall -g -c -o $@ $<
 
 format:
 	clang-format -i src/*

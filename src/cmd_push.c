@@ -3,126 +3,208 @@
 
 #include "spy.h"
 
-static void __remove(playlist_t local, playlist_t remote, bool dryrun)
+struct context {
+	bool add_new;
+	bool force;
+	playlist_t local;
+	playlist_t remote;
+};
+
+static void __push(struct context*, const char* filename);
+
+int cmd_push(char** args)
 {
-	struct strarr tids;
-	bzero(&tids, sizeof(tids));
+	struct context ctx;
+	bzero(&ctx, sizeof(ctx));
 
-	for (int i = 0; i < local->count; i++) {
-		track_t track = &local->tracks[i];
+	while (*args) {
+		char* arg = *args;
+		args++;
 
-		if (! track_remove_tag(track, "remove!"))
-			continue;
-
-		track_t remote_track = playlist_lookup(remote, track->id);
-
-		if (remote_track) {
-			strarr_add(&tids, track->id);
-			track_clear(remote_track);
+		if (! strcmp(arg, "--add-new")) {
+			ctx.add_new = true;
+		} else if (! strcmp(arg, "--force")) {
+			ctx.add_new = true;
+			ctx.force = true;
+		} else {
+			__push(&ctx, arg);
 		}
-
-		track_clear(track);
 	}
 
-	if (dryrun) {
-		for (int i = 0; i < tids.count; i++)
-			printf("REMOVE %s\n", tids.data[i]);
-	} else if (tids.count) {
-		api_remove_tracks(local->playlist_id, &tids);
-	}
-
-	playlist_pack(local);
-	playlist_pack(remote);
-	strarr_clear(&tids);
+	return 0;
 }
 
-static void __add(playlist_t local, playlist_t remote, bool dryrun)
+static void __add(struct context*);
+static void __remove(struct context*);
+static void __reorder(struct context*);
+static void __reindex(playlist_t);
+
+static void __push(struct context* ctx, const char* filename)
+{
+	ctx->local = playlist_read(filename, VF_PLAYLIST_ID);
+	ctx->remote = api_get_playlist(ctx->local->playlist_id);
+
+	__add(ctx);
+	__remove(ctx);
+	__reorder(ctx);
+	__reindex(ctx->local);
+
+	fs_write_playlist(ctx->local, filename);
+
+	playlist_free(ctx->local);
+	playlist_free(ctx->remote);
+}
+
+static void __add(struct context* ctx)
 {
 	struct strarr tids;
 	bzero(&tids, sizeof(tids));
 
-	for (int i = 0; i < local->count; i++) {
-		track_t track = &local->tracks[i];
-
-		if (! track_remove_tag(track, "add!"))
+	track_t lt = NULL;
+	while (playlist_iterate(&lt, ctx->local)) {
+		bool should_add = track_remove_tag(lt, "add!") || ctx->add_new;
+		if (! should_add)
 			continue;
 
-		track_t remote_track = playlist_lookup(remote, track->id);
-
-		if (remote_track)
+		if (playlist_lookup(ctx->remote, lt->id))
 			continue;
 
-		strarr_add(&tids, track->id);
+		strarr_add(&tids, lt->id);
 
 		struct track tmp;
 		bzero(&tmp, sizeof(tmp));
-		tmp.id = strdup(track->id);
-		playlist_add(remote, &tmp);
+		tmp.id = strdup(lt->id);
+		playlist_add(ctx->remote, &tmp);
 	}
 
-	if (dryrun) {
-		for (int i = 0; i < tids.count; i++)
-			printf("ADD %s\n", tids.data[i]);
-	} else if (tids.count) {
-		api_add_tracks(local->playlist_id, &tids);
-	}
+	if (tids.count)
+		api_add_tracks(ctx->local->playlist_id, &tids);
+
 	strarr_clear(&tids);
 }
 
-struct strarr __gather_local(struct playlist* local, struct playlist* remote,
-			     bool* issues)
+static void __grab_tagged_remove(struct context*, struct strarr*);
+static void __grab_locally_missing(struct context*, struct strarr*);
+
+static void __remove(struct context* ctx)
 {
-	struct strarr ret;
-	bzero(&ret, sizeof(ret));
+	struct strarr tids;
+	bzero(&tids, sizeof(tids));
 
-	for (int i = 0; i < local->count; i++) {
-		struct track* track = &local->tracks[i];
-		char* id = track->id;
-		if (! playlist_lookup(remote, id)) {
-			fprintf(stderr,
-				"In local but not in remote: %s (%s by %s)\n",
-				id,
-				track->name,
-				track->artists.data[0]);
-			*issues = true;
-		}
-		strarr_add(&ret, id);
-	}
+	__grab_tagged_remove(ctx, &tids);
+	if (ctx->force)
+		__grab_locally_missing(ctx, &tids);
 
-	return ret;
+	if (tids.count)
+		api_remove_tracks(ctx->local->playlist_id, &tids);
+
+	strarr_clear(&tids);
 }
 
-struct strarr __gather_remote(struct playlist* local, struct playlist* remote,
-			      bool* issues)
+static void __grab_tagged_remove(struct context* ctx, struct strarr* tids)
 {
-	struct strarr ret;
-	bzero(&ret, sizeof(ret));
+	track_t lt = NULL;
+	while (playlist_iterate(&lt, ctx->local)) {
+		if (! track_remove_tag(lt, "remove!"))
+			continue;
 
-	for (int i = 0; i < remote->count; i++) {
-		struct track* track = &remote->tracks[i];
-		char* id = track->id;
-		if (! playlist_lookup(local, id)) {
-			fprintf(stderr,
-				"In remote but not in local: %s (%s by %s)\n",
-				id,
-				track->name,
-				track->artists.data[0]);
-			*issues = true;
+		track_t rt = playlist_lookup(ctx->remote, lt->id);
+		if (rt) {
+			strarr_add(tids, lt->id);
+			track_clear(rt);
 		}
 
-		strarr_add(&ret, id);
+		track_clear(lt);
 	}
-
-	return ret;
 }
 
-struct move {
-	int range_start;
-	int insert_before;
-	int range_length;
-};
+static void __grab_locally_missing(struct context* ctx, struct strarr* tids)
+{
+	track_t rt = NULL;
+	while (playlist_iterate(&rt, ctx->remote)) {
+		if (playlist_lookup(ctx->local, rt->id))
+			continue;
 
-static void __apply(int* indices, int count, struct move* m)
+		strarr_add(tids, rt->id);
+		track_clear(rt);
+	}
+}
+
+static int* __gather_mapping(struct context*);
+static bool __plan(struct reorder_move*, int*, int);
+
+void __reorder(struct context* ctx)
+{
+	int* mapping = __gather_mapping(ctx);
+	int count = ctx->local->count;
+	int moves = 0;
+	struct reorder_move move;
+
+	while (__plan(&move, mapping, count)) {
+		fputc('.', stdout);
+		fflush(stdout);
+		api_reorder(ctx->local->playlist_id, move);
+
+		moves++;
+		if (moves > count)
+			DIE("Something is not right");
+	}
+
+	if (moves > 0) {
+		fputc('\n', stdout);
+		fflush(stdout);
+	}
+
+	free(mapping);
+}
+
+static void __eprintln_track(const char* issue, track_t t)
+{
+	fputs(issue, stderr);
+	fprintf(stderr, "%s (%s by %s)\n", t->id, t->name, t->artists.data[0]);
+}
+
+static int* __gather_mapping(struct context* ctx)
+{
+	playlist_pack(ctx->local);
+	playlist_pack(ctx->remote);
+
+	int* mapping = malloc(ctx->remote->count * sizeof(int));
+
+	bool issues = false;
+
+	for (int i = 0; i < ctx->remote->count; i++) {
+		mapping[i] = -1;
+		track_t t = &ctx->remote->tracks[i];
+
+		for (int j = 0; j < ctx->local->count; j++) {
+			if (! strcmp(t->id, ctx->local->tracks[j].id)) {
+				mapping[i] = j;
+				break;
+			}
+		}
+
+		if (mapping[i] < 0) {
+			__eprintln_track("In remote but not in local: ", t);
+			issues = true;
+		}
+	}
+
+	track_t t = NULL;
+	while (playlist_iterate(&t, ctx->local)) {
+		if (! playlist_lookup(ctx->remote, t->id)) {
+			__eprintln_track("In local but not in remote: ", t);
+			issues = true;
+		}
+	}
+
+	if (issues)
+		exit(1);
+
+	return mapping;
+}
+
+static void __apply(int* indices, int count, struct reorder_move* m)
 {
 	int tmp[count];
 	int fill = 0;
@@ -143,136 +225,75 @@ static void __apply(int* indices, int count, struct move* m)
 		indices[i] = tmp[i];
 }
 
-bool __analyze(struct move* m, int* indices, int count)
+static bool __plan(struct reorder_move* m, int* indices, int count)
 {
-	int first_unordered_index = -1;
+	// Let's say, numbers go like this: [0 1 2 7 3 5 4 8 6]
+	//
+	// Step one is we search for the first misordered pair,
+	// i.e. 2/7 in the example above.
+	//
+	// Here we "pretend" that array has a -1 at index -1, so
+	// if there's a non-zero N at index 0, then the first
+	// misordered pair is -1/N.
 
-	for (int i = 0; i < count; i++)
+	m->insert_before = -1;
+
+	for (int i = 0; i < count; i++) {
 		if (indices[i] != i) {
-			first_unordered_index = i;
+			m->insert_before = i;
 			break;
-		}
-
-	if (first_unordered_index < 0)
-		return false;
-
-	int first_move_value = first_unordered_index;
-	int first_move_index = -1;
-
-	for (int i = 0; i < count; i++)
-		if (indices[i] == first_move_value) {
-			first_move_index = i;
-			break;
-		}
-
-	if (first_move_index == -1)
-		DIE("This is very weird");
-
-	int last_move_index = first_move_index;
-	int first_unordered_value = indices[first_unordered_index];
-	int lookup_value = first_unordered_value - 1;
-
-	int move_index_limit = first_move_index + 100;
-	if (move_index_limit > count)
-		move_index_limit = count;
-
-	for (int i = first_move_index + 1; i < move_index_limit; i++) {
-		if (indices[i] == lookup_value) {
-			last_move_index = i;
-			break;
-		}
-		if (indices[i] < lookup_value) {
-			last_move_index = i;
 		}
 	}
 
-	m->range_start = first_move_index;
-	m->insert_before = first_unordered_index;
-	m->range_length = (last_move_index - first_move_index) + 1;
+	if (m->insert_before < 0) {
+		// We didn't find any. It means that array is fully
+		// sorted and there's nothing else to do.
+		return false;
+	}
+
+	// Step two is we search for the first element of the
+	// slice to move into the gap. In the example above this
+	// would be 3.
+
+	m->range_start = -1;
+
+	for (int i = 0; i < count; i++)
+		if (indices[i] == m->insert_before) {
+			m->range_start = i;
+			break;
+		}
+
+	if (m->range_start < 0)
+		DIE("This is very weird");
+
+	int lookup_value = indices[m->insert_before] - 1;
+
+	int range_max = count - m->range_start;
+	if (range_max > 100)
+		range_max = 100;
+
+	m->range_length = 1;
+
+	// Step three is we search for the last element of the slice
+	// to move into the gap. Ideally we'd want it to be 6, so
+	// we connect both 2-3 and 6-7. But we're also fine with
+	// a mixture of numbers between 3 and 7 (tbd: explain why).
+
+	for (int i = 1; i < range_max; i++) {
+		int value = indices[m->range_start + i];
+		if (value <= lookup_value)
+			m->range_length = i + 1;
+		if (value == lookup_value)
+			break;
+	}
 
 	__apply(indices, count, m);
 
 	return true;
 }
 
-int __plan(struct move* plan, struct strarr* local_tids,
-	   struct strarr* remote_tids)
-{
-	int count = local_tids->count;
-	int indices[count];
-
-	for (int i = 0; i < count; i++)
-		indices[i] = strarr_seek(local_tids, remote_tids->data[i]);
-
-	int fill = 0;
-
-	while (__analyze(&plan[fill], indices, count)) {
-		fill++;
-		if (fill >= count)
-			DIE("This is very weird");
-	}
-
-	return fill;
-}
-
-void __reorder(struct playlist* local, struct playlist* remote, bool dryrun)
-{
-	bool issues = false;
-
-	struct strarr local_tids = __gather_local(local, remote, &issues);
-	struct strarr remote_tids = __gather_remote(local, remote, &issues);
-
-	if (issues)
-		exit(1);
-
-	struct move plan[local->count];
-	int moves = __plan(plan, &local_tids, &remote_tids);
-
-	if (dryrun) {
-		for (int i = 0; i < moves; i++)
-			printf("MOVE insert_before=%d range_start=%d "
-			       "range_length=%d\n",
-			       plan[i].insert_before,
-			       plan[i].range_start,
-			       plan[i].range_length);
-	} else {
-		for (int i = 0; i < moves; i++) {
-			fputc('.', stdout);
-			fflush(stdout);
-			api_reorder(local->playlist_id,
-				    plan[i].range_start,
-				    plan[i].insert_before,
-				    plan[i].range_length);
-		}
-		if (moves > 0) {
-			fputc('\n', stdout);
-			fflush(stdout);
-		}
-	}
-
-	strarr_clear(&local_tids);
-	strarr_clear(&remote_tids);
-}
-
 static void __reindex(struct playlist* p)
 {
 	for (int i = 0; i < p->count; i++)
 		p->tracks[i].remote_index = i + 1;
-}
-
-void cmd_push(const char* filename, bool dryrun)
-{
-	playlist_t local = playlist_read(filename, VF_PLAYLIST_ID);
-	playlist_t remote = api_get_playlist(local->playlist_id);
-
-	__remove(local, remote, dryrun);
-	__add(local, remote, dryrun);
-	__reorder(local, remote, dryrun);
-	__reindex(local);
-
-	if (! dryrun)
-		fs_write_playlist(local, filename);
-
-	playlist_free(local);
-	playlist_free(remote);
 }

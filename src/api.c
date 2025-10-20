@@ -124,15 +124,15 @@ static void __put(const char* path, const char* body)
 	__submit(NULL, "PUT", path, body);
 }
 
-void api_reorder(const char* playlist_id, int start, int before, int length)
+void api_reorder(const char* playlist_id, struct reorder_move move)
 {
 	char path[1024], content[10240];
 	sprintf(path, "/playlists/%s/tracks", playlist_id);
 	sprintf(content,
 		"{\"range_start\":%d,\"insert_before\":%d,\"range_length\":%d}",
-		start,
-		before,
-		length);
+		move.range_start,
+		move.insert_before,
+		move.range_length);
 
 	__put(path, content);
 }

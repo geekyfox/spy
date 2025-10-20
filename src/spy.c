@@ -85,6 +85,8 @@ int main(int argc, char** argv)
 		return cmd_or(argv + 2);
 	if (! strcmp(argv[1], "pull"))
 		return cmd_pull(argv + 2);
+	if (! strcmp(argv[1], "push"))
+		return cmd_push(argv + 2);
 	if (! strcmp(argv[1], "reverse"))
 		return cmd_reverse(argv + 2);
 	if (! strcmp(argv[1], "sort"))
@@ -113,10 +115,6 @@ int main(int argc, char** argv)
 		cmd_login();
 	else if (__match("list", 0))
 		cmd_list();
-	else if (__match("push", 1))
-		cmd_push(argv[2], false);
-	else if (__match_flag("push", "--dryrun", 1))
-		cmd_push(argv[3], true);
 	else if (__match("shuffle", 1))
 		cmd_shuffle(argv[2], 0);
 	else if (__match("shuffle", 2))

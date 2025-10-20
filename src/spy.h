@@ -64,9 +64,15 @@ typedef struct playlist* playlist_t;
 
 /* api.c */
 
+struct reorder_move {
+	int range_start;
+	int insert_before;
+	int range_length;
+};
+
 json_t api_get_paginated(const char* path);
 playlist_t api_get_playlist(const char* id);
-void api_reorder(const char* playlist_id, int start, int before, int length);
+void api_reorder(const char* playlist_id, struct reorder_move);
 void api_add_tracks(const char* playlist_id, const struct strarr* tracks);
 void api_remove_tracks(const char* playlist_id, const struct strarr* track_ids);
 
@@ -231,7 +237,7 @@ int cmd_pull(char** args);
 
 /* cmd_push.c */
 
-void cmd_push(const char* filename, bool dryrun);
+int cmd_push(char** args);
 
 /* cmd_reverse.c */
 
@@ -253,13 +259,13 @@ void cmd_stats(const char* filename);
 
 void cmd_sync_tags(const char* src, const char* dst);
 
-/* cmd_take.c */
-
-int cmd_take(char** args);
-
 /* cmd_tag.c */
 
 int cmd_tag(char** args);
+
+/* cmd_take.c */
+
+int cmd_take(char** args);
 
 /* cmd_xor.c */
 
