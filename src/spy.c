@@ -23,7 +23,7 @@ const char HELP[] =
 	"        Apply the local changes to remote playlist\n"
 	"    spy sort [--race] <filename>\n"
 	"        Rearrange the playlist\n"
-	"    spy shuffle [<count>] <filename>\n"
+	"    spy shuffle <filename>\n"
 	"        Randomize the playlist\n"
 	"    spy log [--bump] <filename>\n"
 	"        Logs a listening session\n"
@@ -89,6 +89,8 @@ int main(int argc, char** argv)
 		return cmd_push(argv + 2);
 	if (! strcmp(argv[1], "reverse"))
 		return cmd_reverse(argv + 2);
+	if (! strcmp(argv[1], "shuffle"))
+		return cmd_shuffle(argv + 2);
 	if (! strcmp(argv[1], "sort"))
 		return cmd_sort(argv + 2);
 	if (! strcmp(argv[1], "tag"))
@@ -115,10 +117,6 @@ int main(int argc, char** argv)
 		cmd_login();
 	else if (__match("list", 0))
 		cmd_list();
-	else if (__match("shuffle", 1))
-		cmd_shuffle(argv[2], 0);
-	else if (__match("shuffle", 2))
-		cmd_shuffle(argv[3], atoi(argv[2]));
 	else if (__match("stats", 1))
 		cmd_stats(argv[2]);
 	else if (__match("sync-tags", 2))

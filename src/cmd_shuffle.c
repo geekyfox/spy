@@ -1,8 +1,9 @@
+#include <string.h>
 #include <strings.h>
 
 #include "spy.h"
 
-static playlist_t __shuffle_playlist(struct playlist* p, int picks)
+static playlist_t __shuffle_playlist(struct playlist* p)
 {
 	struct strarr ids;
 	bzero(&ids, sizeof(ids));
@@ -10,7 +11,7 @@ static playlist_t __shuffle_playlist(struct playlist* p, int picks)
 	for (int i = 0; i < p->count; i++)
 		strarr_add(&ids, p->tracks[i].id);
 
-	strarr_shuffle(&ids, picks);
+	strarr_shuffle(&ids, 0);
 
 	playlist_t ret = playlist_init(p);
 
@@ -24,12 +25,24 @@ static playlist_t __shuffle_playlist(struct playlist* p, int picks)
 	return ret;
 }
 
-void cmd_shuffle(const char* filename, int picks)
+int cmd_shuffle(char** args)
 {
-	playlist_t original = playlist_read(filename, 0);
-	playlist_t shuffled = __shuffle_playlist(original, picks);
-	fs_write_playlist(shuffled, filename);
+	if ((! args) || (! strcmp(*args, "--help"))) {
+		fprintf(stderr, "Usage: spy shuffle <filename...>\n");
+		return 1;
+	}
 
-	playlist_free(original);
-	playlist_free(shuffled);
+	while (args) {
+		char* filename = *args;
+		args++;
+
+		playlist_t original = playlist_read(filename, 0);
+		playlist_t shuffled = __shuffle_playlist(original);
+		fs_write_playlist(shuffled, filename);
+
+		playlist_free(original);
+		playlist_free(shuffled);
+	}
+
+	return 0;
 }

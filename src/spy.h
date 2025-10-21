@@ -245,7 +245,7 @@ int cmd_reverse(char** args);
 
 /* cmd_shuffle.c */
 
-void cmd_shuffle(const char* filename, int limit);
+int cmd_shuffle(char** args);
 
 /* cmd_sort.c */
 
