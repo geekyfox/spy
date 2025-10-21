@@ -194,8 +194,10 @@ static bool __read_index_name_artists(struct track* cur, const char* buff)
 
 	char* name = sep + 4;
 	sep = strstr(name, " :: ");
-	if (! sep)
+	if (! sep) {
+		fprintf(stderr, "Weird name : '%s'\n", name);
 		return false;
+	}
 
 	*sep = '\0';
 	cur->name = strdup(name);
@@ -213,12 +215,12 @@ static void __parse_line(const char* line, int line_index, struct playlist* p,
 		return;
 	}
 
-	if (strncmp(line, "### ", 4) == 0) {
+	if (! strncmp(line, "### ", 4)) {
 		__read_header(p, line + 4);
 		return;
 	}
 
-	if (strncmp(line, "# ", 2) == 0) {
+	if (! strncmp(line, "# ", 2)) {
 		if (t->id)
 			fprintf(stderr, "Line %d is bad", line_index);
 		else
@@ -226,7 +228,7 @@ static void __parse_line(const char* line, int line_index, struct playlist* p,
 		return;
 	}
 
-	if (strncmp(line, "> ", 2) == 0) {
+	if (! strncmp(line, "> ", 2)) {
 		if (t->tags.count)
 			fprintf(stderr, "Line %d is bad", line_index);
 		else
@@ -234,10 +236,16 @@ static void __parse_line(const char* line, int line_index, struct playlist* p,
 		return;
 	}
 
+	if (! strcmp(line, ">")) {
+		if (t->tags.count)
+			fprintf(stderr, "Line %d is bad", line_index);
+		return;
+	}
+
 	if (__read_index_name_artists(t, line))
 		return;
 
-	DIE("Unable to parse line %d: %s", line_index, line);
+	DIE("Unable to parse line %d: '%s'", line_index, line);
 }
 
 playlist_t fs_read_playlist(const char* filename)
