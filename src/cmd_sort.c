@@ -9,6 +9,7 @@ enum sort_mode {
 	SORT_MODE_DEFAULT = 45001,
 	SORT_MODE_RACE = 45002,
 	SORT_MODE_TRIAL = 45003,
+	SORT_MODE_TRAIN = 45004,
 };
 
 struct context {
@@ -144,25 +145,7 @@ static track_t __pick_track_default(struct context* ctx)
 	return NULL;
 }
 
-static track_t __pick_track_race(struct context* ctx)
-{
-	track_t not_yes = NULL, t = NULL;
-
-	while (playlist_iterate(&t, ctx->source)) {
-		if (! __track_fits(ctx, t))
-			continue;
-
-		if (track_has_tag(t, "yes"))
-			return t;
-
-		if (! not_yes)
-			not_yes = t;
-	}
-
-	return not_yes;
-}
-
-static bool __trial_wants_yes(struct context* ctx)
+static bool __train_prefer_yes(struct context* ctx)
 {
 	track_t tracks = ctx->ret->tracks;
 	int count = ctx->ret->count;
@@ -197,36 +180,38 @@ static bool __trial_wants_yes(struct context* ctx)
 	return false;
 }
 
-static track_t __pick_track_trial(struct context* ctx)
+static track_t __pick_track(struct context* ctx)
 {
-	bool wants_yes = __trial_wants_yes(ctx);
+	bool prefer_yes;
+
+	switch (ctx->mode) {
+	case SORT_MODE_DEFAULT:
+		return __pick_track_default(ctx);
+	case SORT_MODE_RACE:
+		prefer_yes = true;
+		break;
+	case SORT_MODE_TRIAL:
+		prefer_yes = false;
+		break;
+	case SORT_MODE_TRAIN:
+		prefer_yes = __train_prefer_yes(ctx);
+		break;
+	default:
+		DIE("Invalid sort mode %d", ctx->mode);
+	}
 
 	track_t t = NULL, result = NULL;
 
 	while (playlist_iterate(&t, ctx->source)) {
 		if (! __track_fits(ctx, t))
 			continue;
-		if (track_has_tag(t, "yes") == wants_yes)
+		if (track_has_tag(t, "yes") == prefer_yes)
 			return t;
 		if (! result)
 			result = t;
 	}
 
 	return result;
-}
-
-static track_t __pick_track(struct context* ctx)
-{
-	switch (ctx->mode) {
-	case SORT_MODE_DEFAULT:
-		return __pick_track_default(ctx);
-	case SORT_MODE_RACE:
-		return __pick_track_race(ctx);
-	case SORT_MODE_TRIAL:
-		return __pick_track_trial(ctx);
-	default:
-		DIE("Invalid sort mode %d", ctx->mode);
-	}
 }
 
 static void __increment_wanted_tag(struct context* ctx)
@@ -263,6 +248,8 @@ int cmd_sort(char** args)
 			mode = SORT_MODE_RACE;
 		else if (! strcmp(*args, "--trial"))
 			mode = SORT_MODE_TRIAL;
+		else if (! strcmp(*args, "--train"))
+			mode = SORT_MODE_TRAIN;
 		else
 			filename = *args;
 
