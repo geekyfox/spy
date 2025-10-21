@@ -62,25 +62,31 @@ json_t api_get_paginated(const char* path)
 	return ret;
 }
 
-void __digest_track(track_t ret, json_t blob)
+static char* __pop_name(json_t obj)
 {
-	json_t track = jsobj_get(blob, "track", NULL);
+	char* name = jsobj_popstr(obj, "name", NULL);
+	if (strcmp(name, ""))
+		return name;
 
+	free(name);
+	return strdup("N/A");
+}
+
+void __digest_track(track_t ret, json_t track)
+{
 	bzero(ret, sizeof(*ret));
 
 	ret->id = jsobj_popstr(track, "id", NULL);
-	ret->name = jsobj_popstr(track, "name", NULL);
+	ret->name = __pop_name(track);
 
 	json_t artists = jsobj_get(track, "artists", NULL);
 
 	int count = jsarr_len(artists);
 	for (int i = 0; i < count; i++) {
 		json_t artist = jsarr_get(artists, i);
-		char* name = jsobj_getstr(artist, "name", NULL);
+		char* name = __pop_name(artist);
 		strarr_add(&ret->artists, name);
 	}
-
-	strarr_add(&ret->tags, "new");
 }
 
 playlist_t api_get_playlist(const char* id)
@@ -96,8 +102,9 @@ playlist_t api_get_playlist(const char* id)
 
 	for (int i = 0; i < count; i++) {
 		json_t blob = jsarr_get(resp, i);
+		json_t track = jsobj_get(blob, "track", NULL);
 		struct track tr;
-		__digest_track(&tr, blob);
+		__digest_track(&tr, track);
 		tr.remote_index = i + 1;
 		playlist_add(ret, &tr);
 	}
