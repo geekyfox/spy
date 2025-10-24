@@ -23,7 +23,6 @@ static void __parse_args(struct context* ctx, char** args)
 
 	if (args[2]) {
 		ctx->need_help = true;
-		return;
 	}
 
 	ctx->amount = atoi(args[0]);

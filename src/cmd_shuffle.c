@@ -32,7 +32,7 @@ int cmd_shuffle(char** args)
 		return 1;
 	}
 
-	while (args) {
+	while (*args) {
 		char* filename = *args;
 		args++;
 

@@ -34,7 +34,7 @@ static void __gather_tags(struct context* ctx)
 
 	for (int i = 0; i < sort_order.count; i++) {
 		int index = strarr_seek(&ctx->tags, sort_order.data[i]);
-		if (index < 0)
+		if (index < fill)
 			continue;
 		strarr_shift(&ctx->tags, index, fill);
 		fill++;

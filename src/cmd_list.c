@@ -8,6 +8,10 @@ void cmd_list(void)
 
 	for (int i = 0; i < count; i++) {
 		json_t entry = jsarr_get(resp, i);
+
+		if (json_isnull(entry))
+			continue;
+
 		char* name = jsobj_getstr(entry, "name", NULL);
 		char* id = jsobj_getstr(entry, "id", NULL);
 		printf("%s    %s\n", id, name);
