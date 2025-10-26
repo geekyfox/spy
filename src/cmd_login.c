@@ -9,6 +9,8 @@
 
 #include "spy.h"
 
+const char CMD_LOGIN_USAGE[] = "";
+
 struct context {
 	struct sockaddr_in addr;
 	int server_fd;

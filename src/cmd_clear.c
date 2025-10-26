@@ -1,14 +1,19 @@
 #include "spy.h"
 
-void cmd_clear(const char* filename)
+const char CMD_CLEAR_USAGE[] = "FILENAME...";
+
+void cmd_clear(void)
 {
-	playlist_t playlist = playlist_read(filename, 0);
+	const char* filename = NULL;
 
-	int count = playlist->count;
+	while (args_popnext(&filename)) {
+		playlist_t playlist = playlist_read(filename, 0);
 
-	playlist->count = 0;
-	fs_write_playlist(playlist, filename);
+		int count = playlist->count;
+		playlist->count = 0;
+		fs_write_playlist(playlist, filename);
 
-	playlist->count = count;
-	playlist_free(playlist);
+		playlist->count = count;
+		playlist_free(playlist);
+	}
 }

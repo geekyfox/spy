@@ -3,6 +3,8 @@
 
 #include "spy.h"
 
+const char CMD_STATS_USAGE[] = "FILENAME";
+
 struct context {
 	playlist_t playlist;
 	struct strarr tags;
@@ -150,8 +152,10 @@ static void __analyze(struct context* ctx)
 	}
 }
 
-void cmd_stats(const char* filename)
+void cmd_stats(void)
 {
+	const char* filename = args_poplast();
+
 	playlist_t playlist = playlist_read(filename, 0);
 
 	struct context ctx;

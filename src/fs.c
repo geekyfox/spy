@@ -1,5 +1,6 @@
 #include <ctype.h>
 #include <errno.h>
+#include <error.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,7 +13,7 @@ struct strbuff fs_read(const char* pathname)
 {
 	FILE* f = fopen(pathname, "r");
 	if (! f)
-		DIE("Error opening file %s: %m", pathname);
+		error(1, errno, "Error opening file %s", pathname);
 
 	struct strbuff ret;
 	bzero(&ret, sizeof(ret));
@@ -252,7 +253,7 @@ playlist_t fs_read_playlist(const char* filename)
 {
 	FILE* f = fopen(filename, "r");
 	if (! f)
-		DIE("Error opening file %s: %m", filename);
+		error(1, errno, "Error opening file %s", filename);
 
 	playlist_t ret = playlist_init(NULL);
 

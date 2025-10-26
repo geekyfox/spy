@@ -1,5 +1,7 @@
 #include "spy.h"
 
+const char CMD_LIST_USAGE[] = "";
+
 void cmd_list(void)
 {
 	json_t resp = api_get_paginated("/me/playlists");

@@ -3,6 +3,8 @@
 
 #include "spy.h"
 
+const char CMD_SHUFFLE_USAGE[] = "FILENAME...";
+
 static playlist_t __shuffle_playlist(struct playlist* p)
 {
 	struct strarr ids;
@@ -25,24 +27,19 @@ static playlist_t __shuffle_playlist(struct playlist* p)
 	return ret;
 }
 
-int cmd_shuffle(char** args)
+void cmd_shuffle(void)
 {
-	if ((! args) || (! strcmp(*args, "--help"))) {
-		fprintf(stderr, "Usage: spy shuffle <filename...>\n");
-		return 1;
-	}
+	const char* filename = args_pop();
 
-	while (*args) {
-		char* filename = *args;
-		args++;
-
+	do {
 		playlist_t original = playlist_read(filename, 0);
 		playlist_t shuffled = __shuffle_playlist(original);
+
 		fs_write_playlist(shuffled, filename);
 
 		playlist_free(original);
 		playlist_free(shuffled);
-	}
 
-	return 0;
+		filename = args_popopt();
+	} while (filename);
 }

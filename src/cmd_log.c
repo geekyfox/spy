@@ -2,33 +2,63 @@
 
 #include "spy.h"
 
+const char CMD_LOG_USAGE[] = "[--bump] FILENAME";
+
+enum mode {
+	MODE_DUMP_UNTAGGED = 43001,
+	MODE_BUMP_UNTAGGED = 43002,
+};
+
+struct args {
+	enum mode mode;
+	const char* filename;
+};
+
+static struct args __parse_args(void)
+{
+	struct args args;
+	const char* flags[] = {"bump"};
+
+	switch (args_flagx(flags, 1)) {
+	case -1:
+		args.mode = MODE_DUMP_UNTAGGED;
+		break;
+	case 0:
+		args.mode = MODE_BUMP_UNTAGGED;
+		break;
+	};
+
+	args.filename = args_poplast();
+
+	return args;
+}
+
 struct context {
+	struct args args;
 	playlist_t source;
 	playlist_t result;
-	enum log_mode mode;
 	struct strarr bump;
 	struct strarr dump;
 	struct strarr bulk;
 };
 
-static void __init(struct context* ctx, const char* filename,
-		   enum log_mode mode)
+static void __init(struct context* ctx)
 {
 	bzero(ctx, sizeof(*ctx));
-	ctx->source = playlist_read(filename, 0);
+	ctx->args = __parse_args();
+	ctx->source = playlist_read(ctx->args.filename, 0);
 	ctx->result = playlist_init(ctx->source);
-	ctx->mode = mode;
 }
 
 struct strarr* __pick_untagged(struct context* ctx)
 {
-	switch (ctx->mode) {
-	case LOG_MODE_DUMP_UNTAGGED:
+	switch (ctx->args.mode) {
+	case MODE_DUMP_UNTAGGED:
 		return &ctx->dump;
-	case LOG_MODE_BUMP_UNTAGGED:
+	case MODE_BUMP_UNTAGGED:
 		return &ctx->bump;
 	default:
-		DIE("Unexpected mode=%d", ctx->mode);
+		DIE("Unexpected mode=%d", ctx->args.mode);
 	}
 }
 
@@ -123,15 +153,15 @@ void __splice(struct context* ctx)
 	strarr_clear(&tids);
 }
 
-void cmd_log(const char* filename, enum log_mode mode)
+void cmd_log(void)
 {
 	struct context ctx;
 
-	__init(&ctx, filename, mode);
+	__init(&ctx);
 	__cleave(&ctx);
 	__splice(&ctx);
 
-	fs_write_playlist(ctx.result, filename);
+	fs_write_playlist(ctx.result, ctx.args.filename);
 
 	playlist_free(ctx.source);
 	playlist_free(ctx.result);

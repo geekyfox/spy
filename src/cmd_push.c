@@ -3,6 +3,8 @@
 
 #include "spy.h"
 
+const char CMD_PUSH_USAGE[] = "[{--add-new | --force}] FILENAME...";
+
 struct context {
 	bool add_new;
 	bool force;
@@ -12,26 +14,31 @@ struct context {
 
 static void __push(struct context*, const char* filename);
 
-int cmd_push(char** args)
+void cmd_push(void)
 {
 	struct context ctx;
 	bzero(&ctx, sizeof(ctx));
 
-	while (*args) {
-		char* arg = *args;
-		args++;
+	const char* filename = NULL;
 
-		if (! strcmp(arg, "--add-new")) {
+	const char* flags[] = {"add-new", "force"};
+
+	while (true) {
+		switch (args_flagx(flags, 2)) {
+		case 0:
 			ctx.add_new = true;
-		} else if (! strcmp(arg, "--force")) {
-			ctx.add_new = true;
+			continue;
+		case 1:
 			ctx.force = true;
-		} else {
-			__push(&ctx, arg);
+			ctx.add_new = true;
+			continue;
 		}
-	}
 
-	return 0;
+		if (! args_popnext(&filename))
+			break;
+
+		__push(&ctx, filename);
+	}
 }
 
 static void __add(struct context*);

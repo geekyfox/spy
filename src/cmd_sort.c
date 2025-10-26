@@ -5,11 +5,25 @@
 
 #include "spy.h"
 
+const char CMD_SORT_USAGE[] = "[{--race | --trial | --train}] FILENAME";
+
+/*
+	 .usage = "spy sort [{--race | --trial | --train}] <filename>"
+		  "\tWith `--race` option, prioritises the tracks tagged `yes`"
+		  "\tWith `--trial` "
+		  "\tWith `--"}};
+*/
+
 enum sort_mode {
 	SORT_MODE_DEFAULT = 45001,
 	SORT_MODE_RACE = 45002,
 	SORT_MODE_TRIAL = 45003,
 	SORT_MODE_TRAIN = 45004,
+};
+
+struct args {
+	const char* filename;
+	enum sort_mode mode;
 };
 
 struct context {
@@ -23,6 +37,33 @@ struct context {
 	int skipped_tags;
 	bool relaxed_fit;
 };
+
+static struct args __parse_args(void)
+{
+	struct args args;
+
+	const char* flags[] = {"race", "trial", "train"};
+	int code = args_flagx(flags, 3);
+
+	switch (code) {
+	case -1:
+		args.mode = SORT_MODE_DEFAULT;
+		break;
+	case 0:
+		args.mode = SORT_MODE_RACE;
+		break;
+	case 1:
+		args.mode = SORT_MODE_TRIAL;
+		break;
+	case 2:
+		args.mode = SORT_MODE_TRAIN;
+		break;
+	};
+
+	args.filename = args_poplast();
+
+	return args;
+}
 
 static bool __have_same_artists(struct context* ctx, track_t tx, track_t ty)
 {
@@ -235,32 +276,15 @@ static bool __record_miss(struct context* ctx)
 	return true;
 }
 
-int cmd_sort(char** args)
+void cmd_sort(void)
 {
-	enum sort_mode mode = SORT_MODE_DEFAULT;
-	const char* filename = NULL;
+	struct args args = __parse_args();
 
-	while (! filename) {
-		if (! *args)
-			return 1;
-
-		if (! strcmp(*args, "--race"))
-			mode = SORT_MODE_RACE;
-		else if (! strcmp(*args, "--trial"))
-			mode = SORT_MODE_TRIAL;
-		else if (! strcmp(*args, "--train"))
-			mode = SORT_MODE_TRAIN;
-		else
-			filename = *args;
-
-		args++;
-	}
-
-	playlist_t playlist = playlist_read(filename, 0);
+	playlist_t playlist = playlist_read(args.filename, 0);
 	playlist_t tmp = playlist_init(playlist);
 
 	struct context ctx = {
-		.mode = mode,
+		.mode = args.mode,
 		.source = playlist,
 		.ret = tmp,
 		.spacing = playlist->same_artist_spacing,
@@ -310,9 +334,7 @@ int cmd_sort(char** args)
 	playlist_free(playlist);
 	playlist = tmp;
 
-	fs_write_playlist(playlist, filename);
+	fs_write_playlist(playlist, args.filename);
 
 	playlist_free(playlist);
-
-	return 0;
 }

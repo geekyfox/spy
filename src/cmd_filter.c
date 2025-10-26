@@ -2,66 +2,52 @@
 
 #include "spy.h"
 
-struct params {
-	char* tag;
+const char CMD_FILTER_USAGE[] = "{ TAG | -TAG } FILENAME";
+
+struct args {
+	const char* tag;
 	bool invert;
-	char* filename;
+	const char* filename;
 };
 
-static bool __parse_args(struct params* p, char** args)
+static struct args __parse_args(void)
 {
-	if (! args[0])
-		return false;
+	struct args args;
 
-	if (! strcmp(args[0], "--help"))
-		return false;
+	const char* tag = args_pop();
 
-	if (! args[1])
-		return false;
-
-	if (args[2])
-		return false;
-
-	if (args[0][0] == '-') {
-		p->tag = args[0] + 1;
-		p->invert = true;
+	if (tag[0] == '-') {
+		args.tag = tag + 1;
+		args.invert = true;
 	} else {
-		p->tag = args[0];
-		p->invert = false;
+		args.tag = tag;
+		args.invert = false;
 	}
 
-	p->filename = args[1];
+	args.filename = args_poplast();
 
-	return true;
+	return args;
 }
 
-int cmd_filter(char** args)
+void cmd_filter(void)
 {
-	struct params p;
+	struct args args = __parse_args();
 
-	if (! __parse_args(&p, args)) {
-		fprintf(stderr,
-			"Usage: spy filter { <tag> | -<tag> } <filename>\n");
-		return 1;
-	}
-
-	playlist_t input = playlist_read(p.filename, 0);
+	playlist_t input = playlist_read(args.filename, 0);
 	playlist_t output = playlist_init(input);
 
-	bool remove_tag = p.invert;
+	bool remove_tag = args.invert;
 	bool keep_tag = ! remove_tag;
 
 	for (int i = 0; i < input->count; i++) {
 		track_t track = &input->tracks[i];
-		bool has_tag = track_has_tag(track, p.tag);
+		bool has_tag = track_has_tag(track, args.tag);
 		bool keep_track = has_tag ? keep_tag : remove_tag;
 		if (keep_track)
 			playlist_add(output, track);
 	}
 
-	fs_write_playlist(output, p.filename);
+	fs_write_playlist(output, args.filename);
 	playlist_free(input);
 	playlist_free(output);
-
-	return 0;
 }

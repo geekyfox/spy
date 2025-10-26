@@ -3,8 +3,7 @@
 
 #include "spy.h"
 
-const char CMD_OR_HELP[] =
-	"spy or [ { --top | --bottom} ] <target filename> <source filename>";
+const char CMD_OR_USAGE[] = "[{ --top | --bottom}] TARGET SOURCE";
 
 enum mode {
 	MODE_DEFAULT = 46001,
@@ -13,8 +12,8 @@ enum mode {
 };
 
 struct context {
-	char* this_name;
-	char* other_name;
+	const char* this_name;
+	const char* other_name;
 	enum mode mode;
 	playlist_t this;
 	playlist_t other;
@@ -22,17 +21,17 @@ struct context {
 	struct strarr this_tids;
 };
 
-static void __parse_args(struct context* ctx, char** args);
+static void __parse_args(struct context* ctx);
 static void __read(struct context* ctx);
 static void __wipe(playlist_t dst, playlist_t src);
 static void __push(struct context* ctx, playlist_t p);
 
-int cmd_or(char** args)
+void cmd_or(void)
 {
 	struct context ctx;
 	bzero(&ctx, sizeof(ctx));
 
-	__parse_args(&ctx, args);
+	__parse_args(&ctx);
 	__read(&ctx);
 
 	switch (ctx.mode) {
@@ -59,48 +58,25 @@ int cmd_or(char** args)
 	playlist_free(ctx.other);
 	playlist_free(ctx.result);
 	strarr_clear(&ctx.this_tids);
-
-	return 0;
 }
 
-static void __parse_args(struct context* ctx, char** args)
+static void __parse_args(struct context* ctx)
 {
-	if (! args[0])
-		goto need_help;
+	const char* flags[] = {"top", "bottom"};
 
-	if (! strcmp(args[0], "--help"))
-		goto need_help;
-
-	if (! args[1])
-		goto need_help;
-
-	if (! args[2]) {
-		ctx->this_name = args[0];
-		ctx->other_name = args[1];
-		ctx->mode = MODE_DEFAULT;
-		return;
-	}
-
-	if (args[3])
-		goto need_help;
-
-	if (! strcmp(args[0], "--top")) {
-		ctx->this_name = args[1];
-		ctx->other_name = args[2];
+	switch (args_flagx(flags, 2)) {
+	case 0:
 		ctx->mode = MODE_TOP;
-		return;
-	}
-
-	if (! strcmp(args[0], "--bottom")) {
-		ctx->this_name = args[1];
-		ctx->other_name = args[2];
+		break;
+	case 1:
 		ctx->mode = MODE_BOTTOM;
-		return;
+		break;
+	default:
+		ctx->mode = MODE_DEFAULT;
 	}
 
-need_help:
-	fprintf(stderr, "Usage: %s\n", CMD_OR_HELP);
-	exit(1);
+	ctx->this_name = args_pop();
+	ctx->other_name = args_poplast();
 }
 
 static void __read(struct context* ctx)

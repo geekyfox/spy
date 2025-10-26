@@ -190,81 +190,106 @@ void url_encode_pair(struct strbuff*, const char* key, const char* value);
 
 void validate_playlist(playlist_t, const char* source, int flags);
 
+/* spy.c */
+
+bool args_flag(const char*);
+int args_flagx(const char**, size_t);
+const char* args_popopt(void);
+const char* args_pop(void);
+const char* args_poplast(void);
+bool args_popnext(const char**);
+void args_finish(void);
+int args_atoi(const char*);
+void args_abort(void);
+
 /* cmd_clear.c */
 
-void cmd_clear(const char* filename);
+extern const char CMD_CLEAR_USAGE[];
+void cmd_clear(void);
 
 /* cmd_drop.c */
 
-int cmd_drop(char** args);
+extern const char CMD_DROP_USAGE[];
+void cmd_drop(void);
 
 /* cmd_fetch.c */
 
-void cmd_fetch(const char* playlist_id, const char* filename);
+extern const char CMD_FETCH_USAGE[];
+void cmd_fetch(void);
 
 /* cmd_filter.c */
 
-int cmd_filter(char** args);
+extern const char CMD_FILTER_USAGE[];
+void cmd_filter(void);
 
 /* cmd_fix.c */
 
-void cmd_fix(const char* filename);
+extern const char CMD_FIX_USAGE[];
+void cmd_fix(void);
 
 /* cmd_list.c */
 
+extern const char CMD_LIST_USAGE[];
 void cmd_list(void);
 
 /* cmd_log.c */
 
-enum log_mode {
-	LOG_MODE_DUMP_UNTAGGED = 43001,
-	LOG_MODE_BUMP_UNTAGGED = 43002,
-};
-
-void cmd_log(const char* filename, enum log_mode);
+extern const char CMD_LOG_USAGE[];
+void cmd_log(void);
 
 /* cmd_login.c */
 
+extern const char CMD_LOGIN_USAGE[];
 void cmd_login(void);
 
 /* cmd_or.c */
 
-int cmd_or(char** args);
+extern const char CMD_OR_USAGE[];
+void cmd_or(void);
 
 /* cmd_pull.c */
 
-int cmd_pull(char** args);
+extern const char CMD_PULL_USAGE[];
+void cmd_pull(void);
 
 /* cmd_push.c */
 
-int cmd_push(char** args);
+extern const char CMD_PUSH_USAGE[];
+void cmd_push(void);
 
 /* cmd_reverse.c */
 
-int cmd_reverse(char** args);
+extern const char CMD_REVERSE_USAGE[];
+void cmd_reverse(void);
 
 /* cmd_shuffle.c */
 
-int cmd_shuffle(char** args);
+extern const char CMD_SHUFFLE_USAGE[];
+void cmd_shuffle(void);
 
 /* cmd_sort.c */
 
-int cmd_sort(char** args);
+extern const char CMD_SORT_USAGE[];
+void cmd_sort(void);
 
 /* cmd_stats.c */
 
-void cmd_stats(const char* filename);
+extern const char CMD_STATS_USAGE[];
+void cmd_stats(void);
 
 /* cmd_tag.c */
 
-int cmd_tag(char** args);
+extern const char CMD_TAG_USAGE[];
+void cmd_tag(void);
 
 /* cmd_take.c */
 
-int cmd_take(char** args);
+extern const char CMD_TAKE_USAGE[];
+void cmd_take(void);
 
 /* cmd_xor.c */
 
-int cmd_xor(char** args);
+extern const char CMD_XOR_USAGE[];
+void cmd_xor(void);
 
 #endif

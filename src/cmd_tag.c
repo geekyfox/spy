@@ -2,6 +2,9 @@
 
 #include "spy.h"
 
+const char CMD_TAG_USAGE[] =
+	"[--infer] [--clear] {+TAG | -TAG | @SOURCE}... FILENAME...";
+
 struct source {
 	playlist_t playlist;
 	struct source* next;
@@ -14,7 +17,6 @@ struct context {
 	struct source* sources;
 	bool infer;
 	bool clear;
-	bool need_help;
 	struct strarr sort_order;
 };
 
@@ -49,17 +51,24 @@ static void __add_source(struct context* ctx, const char* filename)
 	ctx->sources = source;
 }
 
-static void __parse_args(struct context* ctx, char** args)
+static void __parse_args(struct context* ctx)
 {
-	while (*args) {
-		char* arg = *args;
+	const char* flags[] = {"infer", "clear"};
 
-		if (! strcmp(arg, "--help"))
-			ctx->need_help = true;
-		else if (! strcmp(arg, "--infer"))
+	while (true) {
+		switch (args_flagx(flags, 2)) {
+		case 0:
 			ctx->infer = true;
-		else if (! strcmp(arg, "--clear"))
+			continue;
+		case 1:
 			ctx->clear = true;
+			continue;
+		};
+
+		const char* arg = args_popopt();
+
+		if (! arg)
+			break;
 		else if (arg[0] == '+')
 			strarr_add(&ctx->add, arg + 1);
 		else if (arg[0] == '-')
@@ -68,11 +77,10 @@ static void __parse_args(struct context* ctx, char** args)
 			__add_source(ctx, arg + 1);
 		else
 			strarr_add(&ctx->files, arg);
-		args++;
-	}
+	};
 
 	if (__nothing_to_do(ctx))
-		ctx->need_help = true;
+		args_abort();
 }
 
 static void __prep_infer(struct context* ctx, playlist_t p, const char* fname)
@@ -158,24 +166,16 @@ static void __cleanup(struct context* ctx)
 	strarr_clear(&ctx->files);
 }
 
-int cmd_tag(char** args)
+void cmd_tag(void)
 {
 	struct context ctx;
 	bzero(&ctx, sizeof(ctx));
 
-	__parse_args(&ctx, args);
-	if (ctx.need_help) {
-		fprintf(stderr,
-			"Usage: spy tag { +<tag> | -<tag> | --infer }+ "
-			"<filename>\n");
-		__cleanup(&ctx);
-		return 1;
-	}
+	__parse_args(&ctx);
 
 	for (int i = 0; i < ctx.files.count; i++) {
 		__tag(&ctx, ctx.files.data[i]);
 	}
 
 	__cleanup(&ctx);
-	return 0;
 }

@@ -2,6 +2,8 @@
 
 #include "spy.h"
 
+const char CMD_PULL_USAGE[] = "[--local-order] [--skip-gone] FILENAME...";
+
 enum mode {
 	MODE_REMOTE_ORDER = 44001,
 	MODE_LOCAL_ORDER = 44002,
@@ -22,7 +24,7 @@ static void __gather_remote(struct context* ctx);
 static void __gather_new(struct context* ctx);
 static void __gather_local(struct context* ctx);
 
-int cmd_pull(char** args)
+void cmd_pull(void)
 {
 	struct context ctx;
 	bzero(&ctx, sizeof(ctx));
@@ -30,21 +32,23 @@ int cmd_pull(char** args)
 	ctx.mode = MODE_REMOTE_ORDER;
 	ctx.skip_gone = false;
 
-	while (*args) {
-		char* arg = *args;
-		if (! strcmp(arg, "--keep-order")) {
+	const char* flags[] = {"local-order", "skip-gone"};
+
+	while (true) {
+		switch (args_flagx(flags, 2)) {
+		case 0:
 			ctx.mode = MODE_LOCAL_ORDER;
-		} else if (! strcmp(arg, "--skip-gone")) {
+			continue;
+		case 1:
 			ctx.skip_gone = true;
-		} else {
-			ctx.filename = arg;
-			__pull(&ctx);
+			continue;
 		}
 
-		args++;
-	}
+		if (! args_popnext(&ctx.filename))
+			break;
 
-	return 0;
+		__pull(&ctx);
+	}
 }
 
 void __pull(struct context* ctx)

@@ -1,20 +1,15 @@
 #include "spy.h"
 
+const char CMD_REVERSE_USAGE[] = "FILENAME...";
+
 static void __reverse(const char* filename);
 
-int cmd_reverse(char** args)
+void cmd_reverse(void)
 {
-	if (! args[0]) {
-		printf("Usage: spy reverse <filename.playlist ...>\n");
-		return 1;
-	}
+	const char* filename = NULL;
 
-	while (*args) {
-		__reverse(*args);
-		args++;
-	}
-
-	return 0;
+	while (args_popnext(&filename))
+		__reverse(filename);
 }
 
 static void __reverse(const char* filename)

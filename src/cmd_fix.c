@@ -2,6 +2,8 @@
 
 #include "spy.h"
 
+const char CMD_FIX_USAGE[] = "FILENAME";
+
 void __fix_duplicates(playlist_t p)
 {
 	track_t x = NULL;
@@ -18,8 +20,9 @@ void __fix_duplicates(playlist_t p)
 	playlist_pack(p);
 }
 
-void cmd_fix(const char* filename)
+void cmd_fix(void)
 {
+	const char* filename = args_poplast();
 	playlist_t playlist = fs_read_playlist(filename);
 	__fix_duplicates(playlist);
 	validate_playlist(playlist, "after fixing", 0);

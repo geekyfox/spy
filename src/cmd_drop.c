@@ -2,62 +2,60 @@
 
 #include "spy.h"
 
-struct context {
+const char CMD_DROP_USAGE[] =
+	"[N] FILENAME"
+	"\twhen N is provided, removes the first N tracks."
+	"\twhen N is not provided, removes tracks until (and including) "
+	"the first track tagged `cutoff!`."
+	"\twhen N is not provided and no track is tagged `cutoff!` does "
+	"nothing.";
+
+struct args {
+	const char* filename;
 	int amount;
-	char* filename;
-	bool need_help;
 };
 
-static void __parse_args(struct context* ctx, char** args)
+static struct args __parse_args(void)
 {
-	if (! args[0]) {
-		ctx->need_help = true;
-		return;
+	struct args args;
+	const char* first = args_pop();
+	const char* second = args_popopt();
+
+	if (second) {
+		args_finish();
+		args.filename = second;
+		args.amount = args_atoi(first);
+	} else {
+		args.filename = first;
+		args.amount = -1;
 	}
 
-	if (! args[1]) {
-		ctx->amount = -1;
-		ctx->filename = args[0];
-		return;
-	}
-
-	if (args[2]) {
-		ctx->need_help = true;
-		return;
-	}
-
-	ctx->amount = atoi(args[0]);
-	ctx->filename = args[1];
+	return args;
 }
 
-int cmd_drop(char** args)
+void cmd_drop(void)
 {
-	struct context ctx;
-	bzero(&ctx, sizeof(ctx));
+	struct args args = __parse_args();
 
-	__parse_args(&ctx, args);
-	if (ctx.need_help) {
-		fprintf(stderr, "Usage: spy drop <amount> <filename>\n");
-		return 1;
-	}
-
-	playlist_t playlist = playlist_read(ctx.filename, 0);
+	playlist_t playlist = playlist_read(args.filename, 0);
 
 	int count = playlist->count;
 
-	if (ctx.amount > count)
-		ctx.amount = count;
+	if (args.amount > count)
+		args.amount = count;
 
-	if (ctx.amount < 0)
-		ctx.amount = playlist_cutoff(playlist) + 1;
+	if (args.amount < 0)
+		args.amount = playlist_cutoff(playlist) + 1;
 
-	playlist->tracks += ctx.amount;
-	playlist->count -= ctx.amount;
-	fs_write_playlist(playlist, ctx.filename);
+	if (args.amount > 0) {
+		playlist->tracks += args.amount;
+		playlist->count -= args.amount;
 
-	playlist->tracks -= ctx.amount;
-	playlist->count += ctx.amount;
+		fs_write_playlist(playlist, args.filename);
+
+		playlist->tracks -= args.amount;
+		playlist->count += args.amount;
+	}
+
 	playlist_free(playlist);
-
-	return 0;
 }
