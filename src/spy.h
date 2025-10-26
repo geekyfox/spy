@@ -255,10 +255,6 @@ int cmd_sort(char** args);
 
 void cmd_stats(const char* filename);
 
-/* cmd_sync_tags.c */
-
-void cmd_sync_tags(const char* src, const char* dst);
-
 /* cmd_tag.c */
 
 int cmd_tag(char** args);

@@ -2,10 +2,16 @@
 
 #include "spy.h"
 
+struct source {
+	playlist_t playlist;
+	struct source* next;
+};
+
 struct context {
 	struct strarr add;
 	struct strarr remove;
 	struct strarr files;
+	struct source* sources;
 	bool infer;
 	bool clear;
 	bool need_help;
@@ -29,7 +35,18 @@ static bool __nothing_to_do(struct context* ctx)
 	if (ctx->clear)
 		return false;
 
+	if (ctx->sources)
+		return false;
+
 	return true;
+}
+
+static void __add_source(struct context* ctx, const char* filename)
+{
+	struct source* source = malloc(sizeof(struct source));
+	source->playlist = playlist_read(filename, 0);
+	source->next = ctx->sources;
+	ctx->sources = source;
 }
 
 static void __parse_args(struct context* ctx, char** args)
@@ -47,6 +64,8 @@ static void __parse_args(struct context* ctx, char** args)
 			strarr_add(&ctx->add, arg + 1);
 		else if (arg[0] == '-')
 			strarr_add(&ctx->remove, arg + 1);
+		else if (arg[0] == '@')
+			__add_source(ctx, arg + 1);
 		else
 			strarr_add(&ctx->files, arg);
 		args++;
@@ -78,6 +97,20 @@ static void __infer(struct context* ctx, track_t t, int track_index)
 	track_add_tag(t, tag);
 }
 
+static track_t __lookup_in_sources(struct context* ctx, const char* tid)
+{
+	struct source* src = ctx->sources;
+
+	while (src) {
+		track_t track = playlist_lookup(src->playlist, tid);
+		if (track)
+			return track;
+		src = src->next;
+	}
+
+	return NULL;
+}
+
 static void __tag(struct context* ctx, const char* filename)
 {
 	playlist_t playlist = playlist_read(filename, 0);
@@ -90,6 +123,10 @@ static void __tag(struct context* ctx, const char* filename)
 
 		if (ctx->clear)
 			strarr_clear(&track->tags);
+
+		track_t src = __lookup_in_sources(ctx, track->id);
+		if (src)
+			strarr_set(&track->tags, &src->tags);
 
 		for (int j = 0; j < ctx->remove.count; j++)
 			track_remove_tag(track, ctx->remove.data[j]);
@@ -108,6 +145,14 @@ static void __tag(struct context* ctx, const char* filename)
 
 static void __cleanup(struct context* ctx)
 {
+	while (ctx->sources) {
+		struct source* src = ctx->sources;
+		ctx->sources = src->next;
+
+		playlist_free(src->playlist);
+		free(src);
+	}
+
 	strarr_clear(&ctx->add);
 	strarr_clear(&ctx->remove);
 	strarr_clear(&ctx->files);

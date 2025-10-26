@@ -119,8 +119,6 @@ int main(int argc, char** argv)
 		cmd_list();
 	else if (__match("stats", 1))
 		cmd_stats(argv[2]);
-	else if (__match("sync-tags", 2))
-		cmd_sync_tags(argv[2], argv[3]);
 	else
 		__help();
 }
