@@ -75,6 +75,7 @@ playlist_t api_get_playlist(const char* id);
 void api_reorder(const char* playlist_id, struct reorder_move);
 void api_add_tracks(const char* playlist_id, const struct strarr* tracks);
 void api_remove_tracks(const char* playlist_id, const struct strarr* track_ids);
+char* api_create_playlist(const char* filename);
 
 /* fs.c */
 
@@ -206,6 +207,11 @@ void args_abort(void);
 
 extern const char CMD_CLEAR_USAGE[];
 void cmd_clear(void);
+
+/* cmd_clone.c */
+
+extern const char CMD_CLONE_USAGE[];
+void cmd_clone(void);
 
 /* cmd_drop.c */
 

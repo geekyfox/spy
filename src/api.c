@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <string.h>
 
 #include "spy.h"
@@ -116,9 +117,9 @@ playlist_t api_get_playlist(const char* id)
 	return ret;
 }
 
-static void __post(const char* path, const char* body)
+static void __post(struct strbuff* res, const char* path, const char* body)
 {
-	__submit(NULL, "POST", path, body);
+	__submit(res, "POST", path, body);
 }
 
 static void __delete(const char* path, const char* body)
@@ -167,8 +168,9 @@ void api_add_tracks(const char* playlist_id, const struct strarr* tracks)
 			strbuff_addz(&req, tracks->data[i]);
 			strbuff_addch(&req, '"');
 		}
-		strbuff_addz(&req, "]}\0");
-		__post(path, req.data);
+		strbuff_addz(&req, "]}");
+		strbuff_addch(&req, 0);
+		__post(NULL, path, req.data);
 		req.wix = 0;
 		first = last;
 	}
@@ -216,4 +218,72 @@ void api_remove_tracks(const char* playlist_id, const struct strarr* track_ids)
 	}
 
 	free(req.data);
+}
+
+char* api_get_user_id(void)
+{
+	json_t resp = __get("/me");
+	char* user_id = jsobj_popstr(resp, "id", NULL);
+	json_free(resp);
+	return user_id;
+}
+
+static char __sanitize(char c)
+{
+	if (c == '"')
+		return '\'';
+	if (c == '\\')
+		return 0;
+	if (isspace(c))
+		return ' ';
+	if (isalnum(c) || ispunct(c))
+		return c;
+	return 0;
+}
+
+static void __sanitize_name(struct strbuff* req, const char* filename)
+{
+	size_t written = 0;
+
+	for (; *filename; filename++) {
+		char c = __sanitize(*filename);
+		if (c) {
+			strbuff_addch(req, c);
+			written++;
+		}
+	}
+
+	if (! written)
+		strbuff_addz(req, "Brand New Playlist");
+}
+
+char* api_create_playlist(const char* filename)
+{
+	char* user_id = api_get_user_id();
+
+	char path[10240];
+	sprintf(path, "/users/%s/playlists", user_id);
+
+	struct strbuff req, resp;
+	bzero(&req, sizeof(req));
+	bzero(&resp, sizeof(resp));
+
+	strbuff_addz(&req, "{\"name\": \"");
+	__sanitize_name(&req, filename);
+	strbuff_addz(&req, "\", \"description\": ");
+	strbuff_addz(&req, "\"Made with https://github.com/geekyfox/spy\"");
+	strbuff_addz(&req, ", \"public\": false}");
+	strbuff_addch(&req, 0);
+
+	__post(&resp, path, req.data);
+
+	json_t ret = json_parse(&resp);
+	char* playlist_id = jsobj_popstr(ret, "id", NULL);
+
+	free(user_id);
+	free(resp.data);
+	free(req.data);
+	json_free(ret);
+
+	return playlist_id;
 }
