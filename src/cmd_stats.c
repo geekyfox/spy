@@ -3,7 +3,7 @@
 
 #include "spy.h"
 
-const char CMD_STATS_USAGE[] = "FILENAME";
+const char CMD_STATS_USAGE[] = "[TAG] FILENAME";
 
 struct context {
 	playlist_t playlist;
@@ -152,9 +152,33 @@ static void __analyze(struct context* ctx)
 	}
 }
 
+static void __print_one(struct context* ctx, const char* tag)
+{
+	int count = 0;
+
+	track_t t = NULL;
+	while (playlist_iterate(&t, ctx->playlist))
+		if (track_has_tag(t, tag))
+			count++;
+
+	printf("%d\n", count);
+}
+
 void cmd_stats(void)
 {
-	const char* filename = args_poplast();
+	const char* first = args_pop();
+	const char* second = args_popopt();
+	args_finish();
+
+	const char* filename;
+	const char* tag;
+	if (second) {
+		tag = first;
+		filename = second;
+	} else {
+		tag = NULL;
+		filename = first;
+	}
 
 	playlist_t playlist = playlist_read(filename, 0);
 
@@ -165,7 +189,10 @@ void cmd_stats(void)
 
 	ctx.stack = malloc(sizeof(int) * ctx.tags.count);
 
-	__analyze(&ctx);
+	if (tag)
+		__print_one(&ctx, tag);
+	else
+		__analyze(&ctx);
 
 	free(ctx.stack);
 	playlist_free(playlist);
