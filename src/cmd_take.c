@@ -7,8 +7,8 @@ const char CMD_TAKE_USAGE[] =
 	"\twhen N is provided, keeps the first N tracks and removes the rest."
 	"\twhen N is not provided, keeps tracks until (and including) the "
 	"first track tagged `cutoff!`, and removes the rest."
-	"\twhen N is not provided and no track is tagged `cutoff!` does "
-	"nothing.";
+	"\twhen N is not provided and no track is tagged `cutoff!`, clears "
+	"the playlist.";
 
 struct args {
 	const char* filename;
@@ -43,7 +43,7 @@ void cmd_take(void)
 
 	if (args.amount < 0) {
 		int cutoff = playlist_cutoff(playlist);
-		args.amount = (cutoff < 0) ? count : cutoff + 1;
+		args.amount = (cutoff < 0) ? 0 : cutoff + 1;
 	}
 
 	if (args.amount > count)
