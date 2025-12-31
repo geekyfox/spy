@@ -1,6 +1,5 @@
 #include <ctype.h>
 #include <errno.h>
-#include <error.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,8 +11,14 @@
 struct strbuff fs_read(const char* pathname)
 {
 	FILE* f = fopen(pathname, "r");
-	if (! f)
-		error(1, errno, "Error opening file %s", pathname);
+	if (! f) {
+		char* errmsg = strerror(errno);
+		fprintf(stderr,
+			"Error opening file %s: %s\n",
+			pathname,
+			errmsg);
+		exit(1);
+	}
 
 	struct strbuff ret;
 	bzero(&ret, sizeof(ret));
@@ -66,15 +71,18 @@ static char* __resolve(const char* filename)
 	if (lstat(filename, &stat) < 0) {
 		if (errno == ENOENT)
 			return strdup(filename);
-		DIE("lstat() failed: %m");
+		char* err = strerror(errno);
+		DIE("lstat() failed: %s", err);
 	}
 
 	if ((stat.st_mode & S_IFMT) != S_IFLNK)
 		return strdup(filename);
 
 	char* result = realpath(filename, NULL);
-	if (! result)
-		DIE("realpath() failed: %m");
+	if (! result) {
+		char* err = strerror(errno);
+		DIE("realpath() failed: %s", err);
+	}
 
 	return result;
 }
@@ -85,8 +93,10 @@ void fs_write_playlist(playlist_t p, const char* filename)
 	sprintf(tmpfile, "%s.temp", filename);
 
 	FILE* f = fopen(tmpfile, "w");
-	if (! f)
-		DIE("Error opening file %s: %m", tmpfile);
+	if (! f) {
+		char* err = strerror(errno);
+		DIE("Error opening file %s: %s", tmpfile, err);
+	}
 
 	for (int i = 0; i < p->header.count; i++)
 		fprintf(f, "### %s\n", p->header.data[i]);
@@ -252,8 +262,14 @@ static void __parse_line(const char* line, int line_index, struct playlist* p,
 playlist_t fs_read_playlist(const char* filename)
 {
 	FILE* f = fopen(filename, "r");
-	if (! f)
-		error(1, errno, "Error opening file %s", filename);
+	if (! f) {
+		char* errmsg = strerror(errno);
+		fprintf(stderr,
+			"Error opening file %s: %s\n",
+			filename,
+			errmsg);
+		exit(1);
+	}
 
 	playlist_t ret = playlist_init(NULL);
 

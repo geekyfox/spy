@@ -23,9 +23,11 @@ void __ensure_inited(void)
 	}
 }
 
-static void callback(char* ptr, size_t size, size_t nmemb, struct strbuff* buff)
+static size_t callback(char* ptr, size_t size, size_t nmemb,
+		       struct strbuff* buff)
 {
 	strbuff_add(buff, ptr, nmemb);
+	return nmemb;
 }
 
 static void __abort_on_curl_error(CURLcode res, const char* errbuf)

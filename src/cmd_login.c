@@ -32,14 +32,20 @@ static void __init(struct context* ctx, int port)
 	ctx->addr.sin_port = htons(port);
 
 	int fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd < 0)
-		DIE("socket() failed: %m");
+	if (fd < 0) {
+		char* err = strerror(errno);
+		DIE("socket() failed: %s", err);
+	}
 
-	if (bind(fd, (struct sockaddr*)&ctx->addr, sizeof(ctx->addr)))
-		DIE("bind() failed: %m");
+	if (bind(fd, (struct sockaddr*)&ctx->addr, sizeof(ctx->addr))) {
+		char* err = strerror(errno);
+		DIE("bind() failed: %s", err);
+	}
 
-	if (listen(fd, 1))
-		DIE("listen() failed: %m");
+	if (listen(fd, 1)) {
+		char* err = strerror(errno);
+		DIE("listen() failed: %s", err);
+	}
 
 	ctx->server_fd = fd;
 }
@@ -49,15 +55,19 @@ static void __accept(struct context* ctx)
 	socklen_t slen = sizeof(ctx->addr);
 	int fd = accept(ctx->server_fd, (struct sockaddr*)&ctx->addr, &slen);
 
-	if (fd < 0)
-		DIE("accept() failed: %m");
+	if (fd < 0) {
+		char* err = strerror(errno);
+		DIE("accept() failed: %s", err);
+	}
 
 	ctx->client_fd = fd;
 
 	ssize_t size = read(fd, ctx->request, 15000);
 
-	if (size < 0)
-		DIE("read() failed: %m");
+	if (size < 0) {
+		char* err = strerror(errno);
+		DIE("read() failed: %s", err);
+	}
 
 	ctx->request[size] = '\0';
 	if (size == 15000)
@@ -278,7 +288,7 @@ void cmd_login(void)
 	struct context ctx;
 	__init(&ctx, 8888);
 
-	printf("Now go to http://localhost:8888/setup and follow the "
+	printf("Now go to http://127.0.0.1:8888/setup and follow the "
 	       "instructions\n");
 
 	while (true) {
@@ -287,6 +297,8 @@ void cmd_login(void)
 
 		ctx.resp.wix = 0;
 
+		printf("%s %s\n", ctx.method, ctx.url);
+
 		if (__match(&ctx, "GET", "/setup")) {
 			__handle_form(&ctx);
 		} else if (__match(&ctx, "POST", "/submit")) {
@@ -294,11 +306,7 @@ void cmd_login(void)
 		} else if (__match(&ctx, "GET", "/callback")) {
 			__handle_callback(&ctx);
 		} else {
-			printf("method = %s ; url = %s ; body = %s\n",
-			       ctx.method,
-			       ctx.url,
-			       ctx.body);
-
+			printf("body = %s\n", ctx.body);
 			strbuff_addz(&ctx.resp,
 				     "HTTP/1.1 404 Not Found\r\n\r\n");
 		}

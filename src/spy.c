@@ -1,6 +1,5 @@
 #include <ctype.h>
 #include <errno.h>
-#include <error.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -131,7 +130,7 @@ static void __overview(int status, const char* cmd)
 	fputs(" on a specific command\n", out);
 
 	if (cmd)
-		error(status, 0, "Invalid command: %s", cmd);
+		fprintf(out, "Invalid command: %s\n", cmd);
 
 	exit(status);
 }

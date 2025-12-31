@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,8 +27,10 @@ static FILE* __fopen(const char* mode)
 	__pathname(pathname);
 
 	FILE* f = fopen(pathname, mode);
-	if (! f)
-		DIE("Error opening file %s: %m", pathname);
+	if (! f) {
+		char* err = strerror(errno);
+		DIE("Error opening file %s: %s", pathname, err);
+	}
 
 	return f;
 }
