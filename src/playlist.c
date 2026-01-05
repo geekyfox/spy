@@ -13,10 +13,30 @@ playlist_t playlist_init(playlist_t original)
 			ret->playlist_id = strdup(original->playlist_id);
 		if (original->sort_order)
 			ret->sort_order = strdup(original->sort_order);
-		ret->same_artist_spacing = original->same_artist_spacing;
+		ret->spacing = original->spacing;
 		ret->bump_offset = original->bump_offset;
 		ret->bump_spacing = original->bump_spacing;
-		strarr_set(&ret->header, &original->header);
+
+		for (int i = 0; i < original->aliases.count; i++)
+			strarr_add(&ret->aliases, original->aliases.data[i]);
+
+		if (original->tag_spacing) {
+			ret->tag_spacing = malloc(sizeof(struct tag_spacing));
+			struct tag_spacing* rd = original->tag_spacing;
+			struct tag_spacing* wr = ret->tag_spacing;
+
+			while (true) {
+				wr->tag = strdup(rd->tag);
+				wr->spacing = rd->spacing;
+				if (! rd->next) {
+					wr->next = NULL;
+					break;
+				}
+				wr->next = malloc(sizeof(struct tag_spacing));
+				rd = rd->next;
+				wr = wr->next;
+			}
+		}
 	}
 	return ret;
 }
@@ -82,7 +102,6 @@ void playlist_free(playlist_t p)
 		track_clear(&p->tracks[i]);
 	free(p->tracks);
 
-	strarr_clear(&p->header);
 	strarr_clear(&p->aliases);
 
 	while (p->tag_spacing) {

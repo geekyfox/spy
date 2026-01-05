@@ -1,6 +1,6 @@
 #include "spy.h"
 
-static const char RESERVED[] = " !\"#$\%&'()*+,/:;=?@[]";
+static const char RESERVED[] = " !\"#$%&'()*+,/:;=?@[]";
 
 static bool __is_reserved(char ch)
 {

@@ -111,7 +111,7 @@ static void __gather_remote(struct context* ctx)
 		track_t local = playlist_lookup(ctx->local, remote->id);
 		if (local) {
 			track_remove_tag(local, "add!");
-			strarr_move(&remote->tags, &local->tags);
+			track_move(remote, local);
 			track_clear(local);
 		} else {
 			track_add_tag(remote, "new?");

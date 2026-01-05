@@ -30,6 +30,16 @@ bool track_remove_tag(track_t track, const char* tag)
 	return false;
 }
 
+void track_move(track_t dst, track_t src)
+{
+	free(dst->name);
+	dst->name = src->name;
+	src->name = NULL;
+
+	strarr_move(&dst->tags, &src->tags);
+	strarr_move(&dst->artists, &src->artists);
+}
+
 void track_clear(track_t tr)
 {
 	free(tr->id);

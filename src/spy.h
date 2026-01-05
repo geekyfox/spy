@@ -1,9 +1,11 @@
 #ifndef __SPY_HEADER_FILE__
 #define __SPY_HEADER_FILE__
 
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define DIE(fmt, ...)                                                          \
 	do {                                                                   \
@@ -11,6 +13,15 @@
 		fprintf(stderr, fmt, ##__VA_ARGS__);                           \
 		fprintf(stderr, "\n");                                         \
 		abort();                                                       \
+	} while (0)
+
+#define HALT(fmt, ...)                                                         \
+	do {                                                                   \
+		char* err = strerror(errno);                                   \
+		fprintf(stderr, "[%s:%d] ", __FILE__, __LINE__);               \
+		fprintf(stderr, fmt, ##__VA_ARGS__);                           \
+		fprintf(stderr, ": %s\n", err);                                \
+		exit(1);                                                       \
 	} while (0)
 
 struct json_value;
@@ -49,10 +60,9 @@ struct tag_spacing {
 struct playlist {
 	char* playlist_id;
 	char* sort_order;
-	int same_artist_spacing;
+	int spacing;
 	int bump_offset;
 	int bump_spacing;
-	struct strarr header;
 	struct track* tracks;
 	size_t count;
 	size_t alc;
@@ -83,6 +93,10 @@ struct strbuff fs_read(const char*);
 json_t fs_read_json(const char*);
 void fs_write_playlist(playlist_t, const char* filename);
 playlist_t fs_read_playlist(const char* filename);
+
+/* parse.c */
+
+playlist_t parse_playlist(FILE*, const char* filename);
 
 /* playlist.c */
 
@@ -122,6 +136,7 @@ char* strbuff_export(struct strbuff*);
 void track_add_tag(track_t track, const char* tag);
 bool track_has_tag(track_t track, const char* tag);
 bool track_remove_tag(track_t track, const char* tag);
+void track_move(track_t dst, track_t src);
 void track_clear(track_t);
 
 /* json.c */
@@ -190,6 +205,10 @@ void url_encode_pair(struct strbuff*, const char* key, const char* value);
 #define VF_PLAYLIST_ID 2
 
 void validate_playlist(playlist_t, const char* source, int flags);
+
+/* write.c */
+
+void write_playlist(playlist_t p, FILE* f);
 
 /* spy.c */
 

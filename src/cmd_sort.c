@@ -131,10 +131,8 @@ static bool __tags_match(struct context* ctx, track_t t)
 static bool __spaced_tags_overlap(struct context* ctx, track_t t)
 {
 	struct tag_spacing* ts = ctx->source->tag_spacing;
-
-	while (ts) {
+	for (; ts; ts = ts->next) {
 		if (! track_has_tag(t, ts->tag)) {
-			ts = ts->next;
 			continue;
 		}
 
@@ -146,8 +144,6 @@ static bool __spaced_tags_overlap(struct context* ctx, track_t t)
 			if (track_has_tag(&ctx->ret->tracks[i], ts->tag))
 				return true;
 		}
-
-		ts = ts->next;
 	}
 
 	return false;
@@ -287,7 +283,7 @@ void cmd_sort(void)
 		.mode = args.mode,
 		.source = playlist,
 		.ret = tmp,
-		.spacing = playlist->same_artist_spacing,
+		.spacing = playlist->spacing,
 		.tags = NULL,
 		.tag_count = 1,
 		.wanted_tag = 0,

@@ -6,7 +6,7 @@ spy: $(OBJS)
 
 build/%.o: src/%.c src/spy.h
 	@mkdir -p build
-	gcc --std=gnu99 -Wall -g -c -o $@ $<
+	gcc --std=gnu99 -Wall -Werror -pedantic -g -c -o $@ $<
 
 format:
 	clang-format -i src/*
@@ -14,4 +14,7 @@ format:
 clean:
 	rm -rf build
 	rm -f spy
+
+install: spy
+	cp spy ~/.local/bin/spy
 

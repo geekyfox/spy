@@ -5,8 +5,6 @@
 
 const char CMD_CLONE_USAGE[] = "FILENAME";
 
-static void __patch(playlist_t playlist, const char* playlist_id);
-
 void cmd_clone(void)
 {
 	const char* filename = args_poplast();
@@ -25,36 +23,10 @@ void cmd_clone(void)
 
 	printf("Done: https://open.spotify.com/playlist/%s\n", playlist_id);
 
-	__patch(playlist, playlist_id);
+	free(playlist->playlist_id);
+	playlist->playlist_id = playlist_id;
 	fs_write_playlist(playlist, filename);
 
-	free(playlist_id);
 	strarr_clear(&tids);
 	playlist_free(playlist);
-}
-
-static void __patch(playlist_t playlist, const char* playlist_id)
-{
-	struct strarr* header = &playlist->header;
-	int idx = -1;
-	for (int i = 0; i < header->count; i++) {
-		if (! strncmp(header->data[i], "playlist_id ", 12)) {
-			idx = i;
-			break;
-		}
-	}
-
-	char tmp[10240];
-	sprintf(tmp, "playlist_id %s", playlist_id);
-
-	if (idx < 0) {
-		idx = header->count;
-		strarr_add(header, tmp);
-	} else {
-		free(header->data[idx]);
-		header->data[idx] = strdup(tmp);
-	}
-
-	if (idx != 0)
-		strarr_shift(header, idx, 0);
 }
