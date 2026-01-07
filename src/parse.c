@@ -16,11 +16,15 @@ static void __parse_line(struct parser*);
 playlist_t parse_playlist(FILE* file, const char* path)
 {
 	struct parser p = {
-		.result = playlist_init(NULL), .path = path, .line_index = 0};
+		.result = playlist_init(NULL),
+		.path = path,
+		.line_index = 0,
+	};
 
 	bzero(&p.track, sizeof(p.track));
 
 	while (fgets(p.buffer, 10000, file)) {
+		p.line_index++;
 		__trim_right(p.buffer);
 		__parse_line(&p);
 	}
@@ -60,7 +64,7 @@ static void __parse_line(struct parser* parser)
 		return;
 	}
 
-	if ((suf = __match_prefix(buf, "~ "))) {
+	if ((suf = __match_prefix(buf, "~"))) {
 		if (! t->id) {
 			t->id = strdup(suf);
 			return;
@@ -93,39 +97,39 @@ static bool __parse_header(struct parser* parser)
 	char* buf = parser->buffer;
 	char* suf;
 
-	if ((suf = __match_prefix(buf, "playlist_id = "))) {
+	if ((suf = __match_prefix(buf, "playlist_id ="))) {
 		free(p->playlist_id);
 		p->playlist_id = strdup(suf);
 		return true;
 	}
 
-	if ((suf = __match_prefix(buf, "sort_order = "))) {
+	if ((suf = __match_prefix(buf, "sort_order ="))) {
 		free(p->sort_order);
 		p->sort_order = strdup(suf);
 		return true;
 	}
 
-	if ((suf = __match_prefix(buf, "spacing = "))) {
+	if ((suf = __match_prefix(buf, "spacing ="))) {
 		p->spacing = atoi(suf);
 		return true;
 	}
 
-	if ((suf = __match_prefix(buf, "bump_offset = "))) {
+	if ((suf = __match_prefix(buf, "bump_offset ="))) {
 		p->bump_offset = atoi(suf);
 		return true;
 	}
 
-	if ((suf = __match_prefix(buf, "bump_spacing = "))) {
+	if ((suf = __match_prefix(buf, "bump_spacing ="))) {
 		p->bump_spacing = atoi(suf);
 		return true;
 	}
 
-	if ((suf = __match_prefix(buf, "aliases += "))) {
+	if ((suf = __match_prefix(buf, "aliases +="))) {
 		__parse_aliases(p, suf);
 		return true;
 	}
 
-	if ((suf = __match_prefix(buf, "tag_gaps += "))) {
+	if ((suf = __match_prefix(buf, "tag_gaps +="))) {
 		__parse_tag_gap(parser, suf);
 		return true;
 	}
@@ -138,14 +142,17 @@ static char* __match_prefix(char* line, char* prefix)
 	char* x = line;
 	char* y = prefix;
 
-	while (true) {
-		if (*y == '\0')
-			return x;
+	while (*y) {
 		if (*y != *x)
 			return NULL;
 		x++;
 		y++;
 	}
+
+	while (isspace(*x))
+		x++;
+
+	return x;
 }
 
 static void __parse_aliases(playlist_t dst, const char* value)
