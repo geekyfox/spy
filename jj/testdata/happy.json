@@ -1,0 +1,13 @@
+{
+	"some_number": 42,
+	"some_other_number": 42.4242,
+	"array_of_numbers": [
+		1, 2, 3
+	],
+	"object": {
+		"key": "value",
+		"another_key": false
+	},
+	"stuff": null
+}
+

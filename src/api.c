@@ -29,43 +29,48 @@ static void __submit(struct strbuff* ret, const char* method, const char* path,
 	http_submit(ret, req);
 }
 
-static json_t __get(const char* path)
+static jj_t __get(const char* path)
 {
 	struct strbuff buff;
 	__submit(&buff, "GET", path, NULL);
-	json_t ret = json_parse(&buff);
+	jj_t ret = jj_parse(buff.data, buff.wix - 1, NULL);
 	free(buff.data);
 	return ret;
 }
 
-json_t api_get_paginated(const char* path)
+jj_t api_get_paginated(const char* path)
 {
-	json_t ret = jsarr_make();
+	jj_t ret = NULL;
 	char* url = strdup(path);
 
 	while (url) {
-		json_t resp = __get(url);
+		jj_t resp = __get(url);
 		free(url);
 
-		json_t page = jsobj_get(resp, "items", NULL);
-		json_merge(ret, page);
+		jj_t page = jj_pop(resp, "items", NULL);
+		jj_t next = jj_pop(resp, "next", NULL);
+		jj_free(resp);
 
-		json_t next = jsobj_get(resp, "next", NULL);
-
-		if (json_isnull(next))
-			url = NULL;
+		if (! ret)
+			ret = page;
 		else
-			url = json_uwstr(next);
+			jj_merge(ret, page, NULL);
 
-		json_free(resp);
+		if (jj_isnull(next)) {
+			jj_free(next);
+			url = NULL;
+		} else {
+			url = jj_tostr(next, NULL);
+		}
 	}
 
 	return ret;
 }
 
-static char* __pop_name(json_t obj)
+static char* __pop_name(jj_t obj)
 {
-	char* name = jsobj_popstr(obj, "name", NULL);
+	jj_t tmp = jj_pop(obj, "name", NULL);
+	char* name = jj_tostr(tmp, NULL);
 	if (strcmp(name, ""))
 		return name;
 
@@ -73,21 +78,27 @@ static char* __pop_name(json_t obj)
 	return strdup("N/A");
 }
 
-void __digest_track(track_t ret, json_t track)
+void __digest_track(track_t ret, jj_t track)
 {
 	bzero(ret, sizeof(*ret));
 
-	ret->id = jsobj_popstr(track, "id", NULL);
+	jj_t id = jj_pop(track, "id", NULL);
+	ret->id = jj_tostr(id, NULL);
 	ret->name = __pop_name(track);
 
-	json_t artists = jsobj_get(track, "artists", NULL);
+	jj_t artists = jj_pop(track, "artists", NULL);
 
-	int count = jsarr_len(artists);
+	int count = jj_len(artists, NULL);
 	for (int i = 0; i < count; i++) {
-		json_t artist = jsarr_get(artists, i);
+		jj_t artist = jj_popl(artists, i, NULL);
 		char* name = __pop_name(artist);
+		jj_free(artist);
+
 		strarr_add(&ret->artists, name);
+		free(name);
 	}
+
+	jj_free(artists);
 }
 
 playlist_t api_get_playlist(const char* id)
@@ -97,20 +108,24 @@ playlist_t api_get_playlist(const char* id)
 
 	char path[10240];
 	sprintf(path, "/playlists/%s/tracks", id);
-	json_t resp = api_get_paginated(path);
+	jj_t resp = api_get_paginated(path);
 
-	int count = jsarr_len(resp);
+	int count = jj_len(resp, NULL);
 
 	for (int i = 0; i < count; i++) {
-		json_t blob = jsarr_get(resp, i);
-		json_t track = jsobj_get(blob, "track", NULL);
+		jj_t blob = jj_popl(resp, i, NULL);
+		jj_t track = jj_pop(blob, "track", NULL);
+		jj_free(blob);
+
 		struct track tr;
 		__digest_track(&tr, track);
+		jj_free(track);
+
 		tr.remote_index = i + 1;
 		playlist_add(ret, &tr);
 	}
 
-	json_free(resp);
+	jj_free(resp);
 
 	validate_playlist(ret, path, 0);
 
@@ -222,10 +237,11 @@ void api_remove_tracks(const char* playlist_id, const struct strarr* track_ids)
 
 char* api_get_user_id(void)
 {
-	json_t resp = __get("/me");
-	char* user_id = jsobj_popstr(resp, "id", NULL);
-	json_free(resp);
-	return user_id;
+	jj_t resp = __get("/me");
+	jj_t user_id = jj_pop(resp, "id", NULL);
+	jj_free(resp);
+
+	return jj_tostr(user_id, NULL);
 }
 
 static char __sanitize(char c)
@@ -277,13 +293,14 @@ char* api_create_playlist(const char* filename)
 
 	__post(&resp, path, req.data);
 
-	json_t ret = json_parse(&resp);
-	char* playlist_id = jsobj_popstr(ret, "id", NULL);
+	jj_t ret = jj_parse(resp.data, resp.wix - 1, NULL);
+	jj_t tmp = jj_pop(ret, "id", NULL);
+	char* playlist_id = jj_tostr(tmp, NULL);
 
 	free(user_id);
 	free(resp.data);
 	free(req.data);
-	json_free(ret);
+	jj_free(ret);
 
 	return playlist_id;
 }

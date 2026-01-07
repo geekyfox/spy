@@ -32,20 +32,14 @@ static void __init(struct context* ctx, int port)
 	ctx->addr.sin_port = htons(port);
 
 	int fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd < 0) {
-		char* err = strerror(errno);
-		DIE("socket() failed: %s", err);
-	}
+	if (fd < 0)
+		HALT("socket() failed");
 
-	if (bind(fd, (struct sockaddr*)&ctx->addr, sizeof(ctx->addr))) {
-		char* err = strerror(errno);
-		DIE("bind() failed: %s", err);
-	}
+	if (bind(fd, (struct sockaddr*)&ctx->addr, sizeof(ctx->addr)))
+		HALT("bind() failed");
 
-	if (listen(fd, 1)) {
-		char* err = strerror(errno);
-		DIE("listen() failed: %s", err);
-	}
+	if (listen(fd, 1))
+		HALT("listen() failed");
 
 	ctx->server_fd = fd;
 }
@@ -55,19 +49,15 @@ static void __accept(struct context* ctx)
 	socklen_t slen = sizeof(ctx->addr);
 	int fd = accept(ctx->server_fd, (struct sockaddr*)&ctx->addr, &slen);
 
-	if (fd < 0) {
-		char* err = strerror(errno);
-		DIE("accept() failed: %s", err);
-	}
+	if (fd < 0)
+		HALT("accept() failed");
 
 	ctx->client_fd = fd;
 
 	ssize_t size = read(fd, ctx->request, 15000);
 
-	if (size < 0) {
-		char* err = strerror(errno);
-		DIE("read() failed: %s", err);
-	}
+	if (size < 0)
+		HALT("read() failed");
 
 	ctx->request[size] = '\0';
 	if (size == 15000)

@@ -27,10 +27,8 @@ static FILE* __fopen(const char* mode)
 	__pathname(pathname);
 
 	FILE* f = fopen(pathname, mode);
-	if (! f) {
-		char* err = strerror(errno);
-		DIE("Error opening file %s: %s", pathname, err);
-	}
+	if (! f)
+		HALT("Error opening file %s", pathname);
 
 	return f;
 }
@@ -50,35 +48,58 @@ static void __write(void)
 	fclose(f);
 }
 
+static char* __popstr(jj_t value, char* key, char* pathname)
+{
+	jj_err_t err;
+	jj_t item = jj_pop(value, key, &err);
+
+	if (err)
+		goto nope;
+
+	char* result = jj_tostr(item, &err);
+
+	if (err)
+		goto nope;
+
+	return result;
+
+nope:
+	DIE("Failed to get '%s' from %s: %s", key, pathname, jj_errmsg(err));
+}
+
+static double __popnum(jj_t value, char* key, char* pathname)
+{
+	jj_err_t err;
+	jj_t item = jj_pop(value, key, &err);
+
+	if (err)
+		goto nope;
+
+	double result = jj_tonum(item, &err);
+
+	if (err)
+		goto nope;
+
+	return result;
+
+nope:
+	DIE("Failed to get '%s' from %s: %s", key, pathname, jj_errmsg(err));
+}
+
 static void __read(void)
 {
 	char pathname[1024];
 	__pathname(pathname);
 
-	json_t value = fs_read_json(pathname);
-	bool flag;
+	jj_t value = fs_read_json(pathname);
 
-	the_client_id = jsobj_popstr(value, "client_id", &flag);
-	if (! flag)
-		DIE("'client_id' is missing in %s", pathname);
+	the_client_id = __popstr(value, "client_id", pathname);
+	the_client_secret = __popstr(value, "client_secret", pathname);
+	the_access_token = __popstr(value, "access_token", pathname);
+	the_refresh_token = __popstr(value, "refresh_token", pathname);
+	the_expires_at = __popnum(value, "expires_at", pathname);
 
-	the_client_secret = jsobj_popstr(value, "client_secret", &flag);
-	if (! flag)
-		DIE("'client_secret' is missing in %s", pathname);
-
-	the_access_token = jsobj_popstr(value, "access_token", &flag);
-	if (! flag)
-		DIE("'access_token' is missing in %s", pathname);
-
-	the_refresh_token = jsobj_popstr(value, "refresh_token", &flag);
-	if (! flag)
-		DIE("'refresh_token' is missing in %s", pathname);
-
-	the_expires_at = jsobj_popnum(value, "expires_at", &flag);
-	if (! flag)
-		DIE("'expires_at' is missing in %s", pathname);
-
-	json_free(value);
+	jj_free(value);
 }
 
 static const char B64_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -137,32 +158,31 @@ void __make_auth_header(char* dst)
 
 void __apply_response(struct strbuff* buff)
 {
-	json_t value = json_parse(buff);
+	jj_t value = jj_parse(buff->data, buff->wix - 1, NULL);
 
-	bool flag;
-	char* new_access_token = jsobj_popstr(value, "access_token", &flag);
-	if (flag) {
-		free(the_access_token);
-		the_access_token = new_access_token;
-	} else {
-		DIE("'access_token' is missing in %s", buff->data);
-	}
+	jj_t tmp = jj_pop(value, "access_token", NULL);
+	free(the_access_token);
+	the_access_token = jj_tostr(tmp, NULL);
 
-	double expires_in = jsobj_popnum(value, "expires_in", &flag);
-	if (flag) {
-		the_expires_at = time(NULL) + expires_in;
-	} else {
-		DIE("'expires_in' is missing in %s", buff->data);
-	}
+	tmp = jj_pop(value, "expires_in", NULL);
+	double expires_in = jj_tonum(tmp, NULL);
+	the_expires_at = time(NULL) + expires_in;
 
-	char* new_refresh_token = jsobj_popstr(value, "refresh_token", &flag);
-	if (flag) {
+	jj_err_t err;
+	tmp = jj_pop(value, "refresh_token", &err);
+	switch (err) {
+	case JJ_ALLGOOD:
 		free(the_refresh_token);
-		the_refresh_token = new_refresh_token;
-	}
+		the_refresh_token = jj_tostr(tmp, NULL);
+	case JJ_ERR_NOTFOUND:
+		break;
+	default:
+		DIE("Something is wrong with refresh_token: %s",
+		    jj_errmsg(err));
+	};
 
 	free(buff->data);
-	json_free(value);
+	jj_free(value);
 }
 
 void __refresh()

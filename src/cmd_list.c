@@ -4,20 +4,28 @@ const char CMD_LIST_USAGE[] = "";
 
 void cmd_list(void)
 {
-	json_t resp = api_get_paginated("/me/playlists");
+	jj_t resp = api_get_paginated("/me/playlists");
 
-	int count = jsarr_len(resp);
+	int count = jj_len(resp, NULL);
 
 	for (int i = 0; i < count; i++) {
-		json_t entry = jsarr_get(resp, i);
+		jj_t entry = jj_popl(resp, i, NULL);
 
-		if (json_isnull(entry))
+		if (jj_isnull(entry))
 			continue;
 
-		char* name = jsobj_getstr(entry, "name", NULL);
-		char* id = jsobj_getstr(entry, "id", NULL);
+		jj_t tmp = jj_pop(entry, "name", NULL);
+		char* name = jj_tostr(tmp, NULL);
+
+		tmp = jj_pop(entry, "id", NULL);
+		char* id = jj_tostr(tmp, NULL);
+
 		printf("%s    %s\n", id, name);
+
+		jj_free(entry);
+		free(id);
+		free(name);
 	}
 
-	json_free(resp);
+	jj_free(resp);
 }

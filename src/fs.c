@@ -11,14 +11,8 @@
 struct strbuff fs_read(const char* pathname)
 {
 	FILE* f = fopen(pathname, "r");
-	if (! f) {
-		char* errmsg = strerror(errno);
-		fprintf(stderr,
-			"Error opening file %s: %s\n",
-			pathname,
-			errmsg);
-		exit(1);
-	}
+	if (! f)
+		HALT("Error opening file %s", pathname);
 
 	struct strbuff ret;
 	bzero(&ret, sizeof(ret));
@@ -33,11 +27,25 @@ struct strbuff fs_read(const char* pathname)
 	return ret;
 }
 
-json_t fs_read_json(const char* filename)
+jj_t fs_read_json(const char* filename)
 {
-	struct strbuff buff = fs_read(filename);
-	json_t ret = json_parse(&buff);
-	free(buff.data);
+	FILE* f = fopen(filename, "r");
+	if (! f)
+		HALT("Error opening file %s", filename);
+
+	struct jj_parse_error err;
+
+	jj_t ret = jj_fparse(f, &err);
+	if (! ret) {
+		DIE("Failed to parse %s: %s @ line %ld column %ld",
+		    filename,
+		    jj_errmsg(err.perr_code),
+		    err.perr_line,
+		    err.perr_column);
+	}
+
+	fclose(f);
+
 	return ret;
 }
 
@@ -60,18 +68,15 @@ static char* __resolve(const char* filename)
 	if (lstat(filename, &stat) < 0) {
 		if (errno == ENOENT)
 			return strdup(filename);
-		char* err = strerror(errno);
-		DIE("lstat() failed: %s", err);
+		HALT("lstat() failed");
 	}
 
 	if ((stat.st_mode & S_IFMT) != S_IFLNK)
 		return strdup(filename);
 
 	char* result = realpath(filename, NULL);
-	if (! result) {
-		char* err = strerror(errno);
-		DIE("realpath() failed: %s", err);
-	}
+	if (! result)
+		HALT("realpath() failed");
 
 	return result;
 }
@@ -82,10 +87,8 @@ void fs_write_playlist(playlist_t p, const char* filename)
 	sprintf(tmpfile, "%s.temp", filename);
 
 	FILE* f = fopen(tmpfile, "w");
-	if (! f) {
-		char* err = strerror(errno);
-		DIE("Error opening file %s: %s", tmpfile, err);
-	}
+	if (! f)
+		HALT("Error opening file %s", tmpfile);
 
 	write_playlist(p, f);
 

@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../jj/jj.h"
+
 #define DIE(fmt, ...)                                                          \
 	do {                                                                   \
 		fprintf(stderr, "[%s:%d] ", __FILE__, __LINE__);               \
@@ -23,9 +25,6 @@
 		fprintf(stderr, ": %s\n", err);                                \
 		exit(1);                                                       \
 	} while (0)
-
-struct json_value;
-typedef struct json_value* json_t;
 
 struct strbuff {
 	char* data;
@@ -80,7 +79,7 @@ struct reorder_move {
 	int range_length;
 };
 
-json_t api_get_paginated(const char* path);
+jj_t api_get_paginated(const char* path);
 playlist_t api_get_playlist(const char* id);
 void api_reorder(const char* playlist_id, struct reorder_move);
 void api_add_tracks(const char* playlist_id, const struct strarr* tracks);
@@ -90,7 +89,7 @@ char* api_create_playlist(const char* filename);
 /* fs.c */
 
 struct strbuff fs_read(const char*);
-json_t fs_read_json(const char*);
+jj_t fs_read_json(const char*);
 void fs_write_playlist(playlist_t, const char* filename);
 playlist_t fs_read_playlist(const char* filename);
 
@@ -138,41 +137,6 @@ bool track_has_tag(track_t track, const char* tag);
 bool track_remove_tag(track_t track, const char* tag);
 void track_move(track_t dst, track_t src);
 void track_clear(track_t);
-
-/* json.c */
-
-bool json_isnull(json_t);
-
-json_t jsobj_make(void);
-void jsobj_put(json_t obj, char* key, json_t value);
-json_t jsobj_pop(json_t value, const char* key, bool* flagptr);
-char* jsobj_popstr(json_t json, const char* key, bool* flagptr);
-double jsobj_popnum(json_t value, const char* key, bool* flagptr);
-json_t jsobj_get(json_t json, const char* key, bool* flagptr);
-char* jsobj_getstr(json_t json, const char* key, bool* flagptr);
-
-json_t jsarr_make(void);
-void jsarr_push(json_t arr, json_t value);
-size_t jsarr_len(json_t);
-json_t jsarr_get(json_t arr, size_t index);
-
-json_t json_wstr(char* string);
-char* json_uwstr(json_t);
-
-json_t json_wnum(double n);
-
-json_t json_wbool(bool);
-
-json_t json_null(void);
-bool json_isnull(json_t);
-
-void json_merge(json_t, json_t);
-
-void json_free(json_t json);
-
-/* json_parser.c */
-
-json_t json_parse(struct strbuff*);
 
 /* http.c */
 
