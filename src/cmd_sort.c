@@ -5,7 +5,7 @@
 
 #include "spy.h"
 
-const char CMD_SORT_USAGE[] = "[{--race | --trial | --train}] FILENAME";
+const char CMD_SORT_USAGE[] = "[{--race | --trial | --train | --mix}] FILENAME";
 
 /*
 	 .usage = "spy sort [{--race | --trial | --train}] <filename>"
@@ -19,6 +19,7 @@ enum sort_mode {
 	SORT_MODE_RACE = 45002,
 	SORT_MODE_TRIAL = 45003,
 	SORT_MODE_TRAIN = 45004,
+	SORT_MODE_MIX = 45005,
 };
 
 struct args {
@@ -42,8 +43,8 @@ static struct args __parse_args(void)
 {
 	struct args args;
 
-	const char* flags[] = {"race", "trial", "train"};
-	int code = args_flagx(flags, 3);
+	const char* flags[] = {"race", "trial", "train", "mix"};
+	int code = args_flagx(flags, 4);
 
 	switch (code) {
 	case -1:
@@ -57,6 +58,9 @@ static struct args __parse_args(void)
 		break;
 	case 2:
 		args.mode = SORT_MODE_TRAIN;
+		break;
+	case 3:
+		args.mode = SORT_MODE_MIX;
 		break;
 	};
 
@@ -182,20 +186,19 @@ static track_t __pick_track_default(struct context* ctx)
 	return NULL;
 }
 
-static bool __train_prefer_yes(struct context* ctx)
+static bool __train_prefer_yes(struct context* ctx, int freq)
 {
 	track_t tracks = ctx->ret->tracks;
 	int count = ctx->ret->count;
 
-	if (count < 2)
-		return true;
-	if (! track_has_tag(&tracks[count - 1], "yes"))
-		return true;
-	if (! track_has_tag(&tracks[count - 2], "yes"))
+	if (count < freq)
 		return true;
 
-	if ((! ctx->tags) || (ctx->tags->count < 2))
-		return false;
+	for (int i = 0; i < freq; i++) {
+		track_t prev = &tracks[count - i - 1];
+		if (! track_has_tag(prev, "yes"))
+			return true;
+	}
 
 	const char* tag = ctx->tags->data[ctx->wanted_tag];
 	int tag_reps = 0;
@@ -231,7 +234,10 @@ static track_t __pick_track(struct context* ctx)
 		prefer_yes = false;
 		break;
 	case SORT_MODE_TRAIN:
-		prefer_yes = __train_prefer_yes(ctx);
+		prefer_yes = __train_prefer_yes(ctx, 2);
+		break;
+	case SORT_MODE_MIX:
+		prefer_yes = __train_prefer_yes(ctx, 1);
 		break;
 	default:
 		DIE("Invalid sort mode %d", ctx->mode);
