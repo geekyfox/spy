@@ -67,21 +67,36 @@ static void __pop(struct context* ctx, int tagix)
 
 static bool __match(struct context* ctx, track_t t)
 {
+	if (ctx->stack_ix == 1) {
+		int tagix = ctx->stack[0];
+		const char* tag = ctx->tags.data[tagix];
+		return track_has_tag(t, tag);
+	}
+
+	struct strarr* tts = &t->tags;
+
 	for (int i = 0; i < ctx->stack_ix; i++) {
+		if (tts->count <= i)
+			return false;
+
 		int tagix = ctx->stack[i];
 		const char* tag = ctx->tags.data[tagix];
-		if (! track_has_tag(t, tag))
+
+		if (strcmp(tag, tts->data[i]))
 			return false;
 	}
+
 	return true;
 }
 
+/*
 static bool __match_exact(struct context* ctx, track_t t)
 {
 	if (t->tags.count != ctx->stack_ix)
 		return false;
 	return __match(ctx, t);
 }
+*/
 
 static int __count_total(struct context* ctx)
 {
@@ -93,6 +108,7 @@ static int __count_total(struct context* ctx)
 	return result;
 }
 
+/*
 static int __count_leaf(struct context* ctx)
 {
 	int result = 0;
@@ -102,6 +118,7 @@ static int __count_leaf(struct context* ctx)
 			result++;
 	return result;
 }
+*/
 
 static void __pad(int count)
 {
@@ -117,11 +134,13 @@ static void __say_total(struct context* ctx, int total)
 	printf("%s : %d\n", tag, total);
 }
 
+/*
 static void __say_leaf(struct context* ctx, int total)
 {
 	__pad(ctx->stack_ix);
 	printf("* : %d\n", total);
 }
+*/
 
 static void __analyze(struct context* ctx)
 {
@@ -137,6 +156,7 @@ static void __analyze(struct context* ctx)
 
 		__say_total(ctx, total);
 
+		/*
 		int leaf = __count_leaf(ctx);
 
 		if (leaf == total) {
@@ -146,6 +166,7 @@ static void __analyze(struct context* ctx)
 
 		if (leaf > 0)
 			__say_leaf(ctx, leaf);
+		*/
 
 		__analyze(ctx);
 		__pop(ctx, i);
