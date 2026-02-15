@@ -89,7 +89,7 @@ static void __halt(struct parser* parser)
 }
 
 static void __parse_aliases(playlist_t dst, const char* value);
-static void __parse_tag_gap(struct parser* parser, const char* value);
+static void __parse_tag_spacing(struct parser* parser, const char* value);
 
 static bool __parse_header(struct parser* parser)
 {
@@ -129,8 +129,8 @@ static bool __parse_header(struct parser* parser)
 		return true;
 	}
 
-	if ((suf = __match_prefix(buf, "tag_gaps +="))) {
-		__parse_tag_gap(parser, suf);
+	if ((suf = __match_prefix(buf, "tag_spacing +="))) {
+		__parse_tag_spacing(parser, suf);
 		return true;
 	}
 
@@ -168,7 +168,7 @@ static void __parse_aliases(playlist_t dst, const char* value)
 	strarr_clear(&tmp);
 }
 
-static void __parse_tag_gap(struct parser* parser, const char* value)
+static void __parse_tag_spacing(struct parser* parser, const char* value)
 {
 	char* sep = strstr(value, " ");
 	if (! sep)

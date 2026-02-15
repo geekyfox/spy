@@ -111,6 +111,7 @@ void playlist_free(playlist_t);
 /* strarr.c */
 
 void strarr_add(struct strarr*, const char*);
+void strarr_adopt(struct strarr*, char*);
 void strarr_set(struct strarr* dst, struct strarr* src);
 void strarr_move(struct strarr* dst, struct strarr* src);
 bool strarr_has(struct strarr* arr, const char* s);

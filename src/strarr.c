@@ -6,11 +6,16 @@
 
 void strarr_add(struct strarr* arr, const char* s)
 {
+	strarr_adopt(arr, strdup(s));
+}
+
+void strarr_adopt(struct strarr* arr, char* s)
+{
 	if (arr->alc == arr->count) {
 		arr->alc = arr->alc * 2 + 8;
 		arr->data = realloc(arr->data, sizeof(char*) * arr->alc);
 	}
-	arr->data[arr->count++] = strdup(s);
+	arr->data[arr->count++] = s;
 }
 
 void strarr_set(struct strarr* dst, struct strarr* src)

@@ -665,12 +665,12 @@ char* jj_tostr(jj_t value, jj_err_t* errptr)
 void jj_merge(jj_t x, jj_t y, jj_err_t* errptr)
 {
 	if (x->typecode != TYPE_ARRAY) {
-		STOP(JJ_ERR_WRONGTYPE, "First argument is not a string");
+		STOP(JJ_ERR_WRONGTYPE, "First argument is not an array");
 		return;
 	}
 
 	if (y->typecode != TYPE_ARRAY) {
-		STOP(JJ_ERR_WRONGTYPE, "First argument is not a string");
+		STOP(JJ_ERR_WRONGTYPE, "Second argument is not an array");
 		return;
 	}
 

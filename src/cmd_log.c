@@ -115,8 +115,7 @@ void __flush(struct strarr* dst, struct strarr* src, int count)
 		char* s = __pop(src);
 		if (s == NULL)
 			return;
-		strarr_add(dst, s);
-		free(s);
+		strarr_adopt(dst, s);
 	}
 }
 

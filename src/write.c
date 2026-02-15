@@ -36,6 +36,12 @@ void write_playlist(playlist_t p, FILE* f)
 	if (p->spacing)
 		fprintf(f, "spacing = %d\n", p->spacing);
 
+	if (p->bump_offset)
+		fprintf(f, "bump_offset = %d\n", p->bump_offset);
+
+	if (p->bump_spacing)
+		fprintf(f, "bump_spacing = %d\n", p->bump_spacing);
+
 	for (int i = 0; i < p->aliases.count; i += 2) {
 		char* x = p->aliases.data[i];
 		char* y = p->aliases.data[i + 1];

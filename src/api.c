@@ -94,8 +94,7 @@ void __digest_track(track_t ret, jj_t track)
 		char* name = __pop_name(artist);
 		jj_free(artist);
 
-		strarr_add(&ret->artists, name);
-		free(name);
+		strarr_adopt(&ret->artists, name);
 	}
 
 	jj_free(artists);
