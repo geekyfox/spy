@@ -10,7 +10,7 @@ void cmd_fetch(void)
 	playlist_t p = api_get_playlist(api_id);
 
 	for (int i = 0; i < p->count; i++)
-		track_add_tag(&p->tracks[i], "new?");
+		track_add_tag(&p->tracks[i], "new");
 
 	fs_write_playlist(p, filename);
 	playlist_free(p);

@@ -200,6 +200,9 @@ static bool __train_prefer_yes(struct context* ctx, int freq)
 			return true;
 	}
 
+	if (! ctx->tags)
+		return false;
+
 	const char* tag = ctx->tags->data[ctx->wanted_tag];
 	int tag_reps = 0;
 
