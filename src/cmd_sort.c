@@ -5,14 +5,18 @@
 
 #include "spy.h"
 
-const char CMD_SORT_USAGE[] = "[{--race | --trial | --train | --mix}] FILENAME";
-
-/*
-	 .usage = "spy sort [{--race | --trial | --train}] <filename>"
-		  "\tWith `--race` option, prioritises the tracks tagged `yes`"
-		  "\tWith `--trial` "
-		  "\tWith `--"}};
-*/
+const char CMD_SORT_USAGE[] =
+	"[{--race | --trial | --train | --mix}] FILENAME"
+	"\tfor the purposes of this explanation, \"new\" tracks are the ones "
+	"that are tagged `new`, and \"old\" tracks are the ones that aren't"
+	"\twith `--race` option, puts old tracks at the beginning and new ones "
+	"at the end"
+	"\twith `--trial` option, puts new tracks at the beginning and old "
+	"ones at the end"
+	"\twith `--train` option, attempts to arrange them in "
+	"old-old-new-old-old-new pattern"
+	"\twith `--mix` option, attempts to arrange them in old-new-old-new "
+	"pattern";
 
 enum sort_mode {
 	SORT_MODE_DEFAULT = 45001,
@@ -186,22 +190,22 @@ static track_t __pick_track_default(struct context* ctx)
 	return NULL;
 }
 
-static bool __train_prefer_yes(struct context* ctx, int freq)
+static bool __train_prefer_new(struct context* ctx, int freq)
 {
 	track_t tracks = ctx->ret->tracks;
 	int count = ctx->ret->count;
 
 	if (count < freq)
-		return true;
+		return false;
 
 	for (int i = 0; i < freq; i++) {
 		track_t prev = &tracks[count - i - 1];
-		if (! track_has_tag(prev, "yes"))
-			return true;
+		if (track_has_tag(prev, "new"))
+			return false;
 	}
 
 	if (! ctx->tags)
-		return false;
+		return true;
 
 	const char* tag = ctx->tags->data[ctx->wanted_tag];
 	int tag_reps = 0;
@@ -213,34 +217,34 @@ static bool __train_prefer_yes(struct context* ctx, int freq)
 	for (int i = count - 1; i >= 0; i--) {
 		if (! track_has_tag(&tracks[i], tag))
 			continue;
-		if (! track_has_tag(&tracks[i], "yes"))
-			return true;
+		if (track_has_tag(&tracks[i], "new"))
+			return false;
 		tag_reps--;
 		if (tag_reps == 0)
-			return false;
+			return true;
 	}
 
-	return false;
+	return true;
 }
 
 static track_t __pick_track(struct context* ctx)
 {
-	bool prefer_yes;
+	bool prefer_new;
 
 	switch (ctx->mode) {
 	case SORT_MODE_DEFAULT:
 		return __pick_track_default(ctx);
 	case SORT_MODE_RACE:
-		prefer_yes = true;
+		prefer_new = false;
 		break;
 	case SORT_MODE_TRIAL:
-		prefer_yes = false;
+		prefer_new = true;
 		break;
 	case SORT_MODE_TRAIN:
-		prefer_yes = __train_prefer_yes(ctx, 2);
+		prefer_new = __train_prefer_new(ctx, 2);
 		break;
 	case SORT_MODE_MIX:
-		prefer_yes = __train_prefer_yes(ctx, 1);
+		prefer_new = __train_prefer_new(ctx, 1);
 		break;
 	default:
 		DIE("Invalid sort mode %d", ctx->mode);
@@ -251,7 +255,7 @@ static track_t __pick_track(struct context* ctx)
 	while (playlist_iterate(&t, ctx->source)) {
 		if (! __track_fits(ctx, t))
 			continue;
-		if (track_has_tag(t, "yes") == prefer_yes)
+		if (track_has_tag(t, "new") == prefer_new)
 			return t;
 		if (! result)
 			result = t;
