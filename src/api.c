@@ -106,7 +106,7 @@ playlist_t api_get_playlist(const char* id)
 	ret->playlist_id = strdup(id);
 
 	char path[10240];
-	sprintf(path, "/playlists/%s/tracks", id);
+	sprintf(path, "/playlists/%s/items", id);
 	jj_t resp = api_get_paginated(path);
 
 	int count = jj_len(resp, NULL);
@@ -149,7 +149,7 @@ static void __put(const char* path, const char* body)
 void api_reorder(const char* playlist_id, struct reorder_move move)
 {
 	char path[1024], content[10240];
-	sprintf(path, "/playlists/%s/tracks", playlist_id);
+	sprintf(path, "/playlists/%s/items", playlist_id);
 	sprintf(content,
 		"{\"range_start\":%d,\"insert_before\":%d,\"range_length\":%d}",
 		move.range_start,
@@ -162,7 +162,7 @@ void api_reorder(const char* playlist_id, struct reorder_move move)
 void api_add_tracks(const char* playlist_id, const struct strarr* tracks)
 {
 	char path[10240];
-	sprintf(path, "/playlists/%s/tracks", playlist_id);
+	sprintf(path, "/playlists/%s/items", playlist_id);
 
 	int first = 0;
 
@@ -219,7 +219,7 @@ static void __make_remove_request(struct strbuff* req, struct strarr* tids)
 void api_remove_tracks(const char* playlist_id, const struct strarr* track_ids)
 {
 	char path[10240];
-	sprintf(path, "/playlists/%s/tracks", playlist_id);
+	sprintf(path, "/playlists/%s/items", playlist_id);
 
 	struct strbuff req;
 	bzero(&req, sizeof(req));
@@ -274,11 +274,6 @@ static void __sanitize_name(struct strbuff* req, const char* filename)
 
 char* api_create_playlist(const char* filename)
 {
-	char* user_id = api_get_user_id();
-
-	char path[10240];
-	sprintf(path, "/users/%s/playlists", user_id);
-
 	struct strbuff req, resp;
 	bzero(&req, sizeof(req));
 	bzero(&resp, sizeof(resp));
@@ -290,13 +285,12 @@ char* api_create_playlist(const char* filename)
 	strbuff_addz(&req, ", \"public\": false}");
 	strbuff_addch(&req, 0);
 
-	__post(&resp, path, req.data);
+	__post(&resp, "/me/playlists", req.data);
 
 	jj_t ret = jj_parse(resp.data, resp.wix - 1, NULL);
 	jj_t tmp = jj_pop(ret, "id", NULL);
 	char* playlist_id = jj_tostr(tmp, NULL);
 
-	free(user_id);
 	free(resp.data);
 	free(req.data);
 	jj_free(ret);
