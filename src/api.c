@@ -197,7 +197,7 @@ static void __make_remove_request(struct strbuff* req, struct strarr* tids)
 	int count = 0;
 	req->wix = 0;
 
-	strbuff_addz(req, "{\"tracks\":[");
+	strbuff_addz(req, "{\"items\":[");
 
 	while (count < 50) {
 		const char* tid = strarr_pop(tids);
