@@ -16,12 +16,10 @@ static void __write_track(FILE* f, struct track* tr, int index)
 
 	fprintf(f, " - %s\n", tr->name);
 	fprintf(f, "~ %s\n", tr->id);
-	fprintf(f, "~ ");
-	for (int i = 0; i < tr->tags.count; i++) {
-		if (i != 0)
-			fprintf(f, " ");
-		fprintf(f, "%s", tr->tags.data[i]);
-	}
+	fprintf(f, "~");
+	for (int i = 0; i < tr->tags.count; i++)
+		fprintf(f, " %s", tr->tags.data[i]);
+
 	fprintf(f, "\n\n");
 }
 

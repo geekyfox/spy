@@ -99,7 +99,7 @@ static void __gather_new(struct context* ctx)
 	while (playlist_iterate(&t, ctx->remote)) {
 		if (playlist_lookup(ctx->local, t->id))
 			continue;
-		track_add_tag(t, "new?");
+		track_add_tag(t, "new");
 		playlist_add(ctx->combined, t);
 	}
 }
@@ -114,7 +114,7 @@ static void __gather_remote(struct context* ctx)
 			track_move(remote, local);
 			track_clear(local);
 		} else {
-			track_add_tag(remote, "new?");
+			track_add_tag(remote, "new");
 		}
 		playlist_add(ctx->combined, remote);
 	}
@@ -127,7 +127,7 @@ static void __gather_local(struct context* ctx)
 		track_t remote = playlist_lookup(ctx->remote, local->id);
 		if (remote) {
 			track_remove_tag(local, "add!");
-			strarr_move(&remote->tags, &local->tags);
+			track_move(remote, local);
 			track_clear(local);
 			playlist_add(ctx->combined, remote);
 			continue;

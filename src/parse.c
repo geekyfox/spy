@@ -70,7 +70,8 @@ static void __parse_line(struct parser* parser)
 			return;
 		}
 		if (! t->tags.count) {
-			strarr_split(&t->tags, suf, " ");
+			if (*suf)
+				strarr_split(&t->tags, suf, " ");
 			return;
 		}
 	}
