@@ -250,18 +250,45 @@ static track_t __pick_track(struct context* ctx)
 		DIE("Invalid sort mode %d", ctx->mode);
 	}
 
-	track_t t = NULL, result = NULL;
+	track_t t = NULL;
+
+	track_t new = NULL, old = NULL, fill = NULL;
 
 	while (playlist_iterate(&t, ctx->source)) {
+		if (track_has_tag(t, "*")) {
+			fill = fill ? fill : t;
+			continue;
+		}
+
 		if (! __track_fits(ctx, t))
 			continue;
-		if (track_has_tag(t, "new") == prefer_new)
-			return t;
-		if (! result)
-			result = t;
+
+		if (track_has_tag(t, "new")) {
+			new = new ? new : t;
+		} else {
+			old = old ? old : t;
+		}
+
+		if (old && new)
+			break;
 	}
 
-	return result;
+	if (prefer_new) {
+		if (new)
+			return new;
+		if (old)
+			return old;
+	} else {
+		if (old)
+			return old;
+		if (new)
+			return new;
+	}
+
+	if (ctx->relaxed_fit && fill)
+		return fill;
+
+	return NULL;
 }
 
 static void __increment_wanted_tag(struct context* ctx)

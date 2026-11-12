@@ -20,5 +20,5 @@ clean:
 	rm -f spy
 
 install: spy
-	cp spy ~/.local/bin/spy
+	cp spy /usr/local/bin
 
